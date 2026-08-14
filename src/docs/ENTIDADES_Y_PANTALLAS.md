@@ -84,6 +84,9 @@
 | `id` | string | Sí | Identificador único |
 | `nombre` | string | Sí | Nombre de la manada (ej: "Mi Primera Manada") |
 | `mascotas` | ManadaMascota[] | Sí | Lista de mascotas en la manada |
+| `monto` | number | Sí | **Monto global mensual** de la manada (persistido en `leopet_manada_monto`; default 50 USD) |
+
+> **Regla de monto global (corrección HU8/HU11):** el aporte mensual pertenece a la **manada completa**, no a cada mascota. En cada cambio (agregar/remover mascota o editar monto) se recalcula el reparto equitativo: `montoPorMascota = round2(monto / mascotas.length)`. `totalMonthly` de la manada = `monto` global.
 
 ### ManadaMascota (`src/types/manada.js`)
 | Campo | Tipo | Requerido | Descripción |
@@ -147,10 +150,10 @@
 
 ### `/mi-manada/configurar` — Carrito / Configurador de Manada
 - **Estado:** IMPLEMENTADA
-- Muestra las mascotas guardadas en `localStorage` con sliders para ajustar el `montoMensual` de cada una.
+- Muestra las mascotas guardadas en `localStorage` con el desglose del **monto global de la manada**: slider único `$20–$200` (paso 5), reparto equitativo por mascota, comisión de plataforma (15%) y subtotal neto por mascota.
 - Botón **"Confirmar Apadrinamiento"**:
   - Si no está autenticado → Despliega Modal de Login/Registro Rápido con los campos oficiales (`nombre`, `apellido`, `correo`, `password`), preservando el carrito intacto en `localStorage`.
-  - Si está autenticado → Carga el botón interactivo de PayPal Sandbox.
+  - Si está autenticado → Carga el botón interactivo de PayPal Sandbox (cobra el monto global). Al confirmar crea la `Suscripcion` con `montoMensual = monto global`, `comision`/`subtotalNeto` y pets con `monthlyAmount = montoPorMascota`.
 
 ### `/dashboard` — Panel del Padrino
 - **Estado:** IMPLEMENTADA
@@ -159,7 +162,8 @@
 ### `/dashboard/evidencias` — Gestión y Calificación de Evidencias
 - **Estado:** IMPLEMENTADA
 - Renderiza la lista de evidencias asociadas.
-- Permite calificar con 1-5 estrellas y agregar comentario.
+- Permite calificar con 1-5 estrellas y agregar comentario. **Al calificar (HU11)** se genera o actualiza el `Pago` de la mascota/evidencia con estado `pendiente_desembolso` y se notifica a la fundación con el monto de liquidación.
+- Cada tarjeta muestra el badge de reembolso si existe un pago aún no desembolsado.
 - Botón **"Reportar inconsistencia"** (HU12): abre modal con motivo (Fraude, Maltrato animal, Foto duplicada, No corresponde a la mascota, Calidad insuficiente, Otro), descripción obligatoria y carga de archivos adjuntos.
 - Al enviar: registra la `Denuncia` en `leopet_admin_denuncias` con estado `pendiente` y Nro. de Ticket `LP-####`, notifica al administrador y muestra confirmación con el ticket.
 - La evidencia reportada cambia a estado `en_revision` mientras exista una denuncia abierta.
@@ -174,7 +178,7 @@
 
 ### `/dashboard/manada` — Gestión de Suscripción
 - **Estado:** IMPLEMENTADA
-- Permite pausar cobro por 30 días, ajustar montos o eliminar mascotas de la manada en `localStorage`.
+- Permite pausar cobro por 30 días, **editar el monto global de la manada**, ajustar montos de suscripciones o eliminar mascotas (siempre con reparto equitativo recalculado) en `localStorage`.
 
 ---
 
@@ -228,6 +232,33 @@
 **AuditoriaDenuncia:** `{ accion: string, fecha: string, detalle?: string }` — registro cronológico de la
 creación, investigación, sanción/rechazo y reversión de cada denuncia (HU6).
 
+### Pago (`src/app/lib/pagos.ts` + `src/context/PagoContext.tsx`)
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `id` | string | Sí | UUID interno |
+| `numero` | string | Sí | Nro. público (`PAY-####`) |
+| `evidenciaId` | string | Sí | FK a la Evidencia calificada |
+| `mascotaId` | string | Sí | Mascota asociada |
+| `usuarioId` | string | Sí | Donador que calificó |
+| `fundacionId` | string | Sí | Fundación beneficiaria |
+| `estado` | enum | Sí | `'pendiente_desembolso'` \| `'apelada'` \| `'mediada'` \| `'desembolsada'` |
+| `calificacion` | number | Sí | 0-5 estrellas otorgadas |
+| `montoBrutoPorMascota` | number | Sí | Reparto equitativo global (`montoGlobal / mascotas`) |
+| `comisionPlataforma` | number | Sí | 15% del monto bruto |
+| `subtotalNeto` | number | Sí | `bruto − comisión` (monto desembolsable antes de factor) |
+| `factor` | number | Sí | Factor HU11 según estrellas |
+| `montoReembolso` | number | Sí | `subtotalNeto × factor` (monto final a la fundación) |
+| `montoAnterior` | number | No | Subtotal previo a la mediación (para comparativa) |
+| `montoReembolsoAnterior` | number | No | Monto final previo a la mediación |
+| `mediacionCalificacion` | number | No | Estrellas fijadas por el admin al mediar |
+| `mediacionComentario` | string | No | Comentario de la mediación |
+| `comentario` | string | No | Comentario del donador al calificar |
+| `auditoria` | AuditoriaPago[] | Sí | Log de acciones (HU6) |
+| `fecha` | string | Sí | Fecha (ISO) |
+
+**Escenarios HU11 (factor sobre subtotal neto por mascota):** 4-5★ → `1.0` (100%), 3★ → `1/1.75` (~57%), 2★ → `1/1.5` (~67%), 1★ → `1/1.25` (80%), 0★ → `0` (penalización total).
+**Comisión de plataforma:** 15% del monto bruto. **Flujo:** donador califica → `Pago` `pendiente_desembolso` → fundación apela (`apelada`) → admin media (`mediada`, recalcula automático con `subtotal × factor`) → admin aprueba (`desembolsada`). Persistencia en `leopet_pagos`.
+
 ### `/admin` — Dashboard del Administrador
 - **Estado:** IMPLEMENTADA
 - Muestra 4 tarjetas de métricas: Aprobadas, Pendientes, Denuncias Abiertas, Resueltas.
@@ -259,6 +290,13 @@ creación, investigación, sanción/rechazo y reversión de cada denuncia (HU6).
 - **Notificaciones (HU9):** al resolver o revertir se notifica al donador y a la fundación (medida tomada + derecho a apelación).
 - **Reversión por Error Administrativo (HU10):** botón **"Revertir decisión"** en denuncias resueltas/rechazadas; restaura los estados previos (cuenta de la fundación → `Activa`, calificación de la evidencia → anterior, monto → original), marca `revertida` y notifica el cambio.
 - Persistencia: `localStorage` clave `leopet_admin_denuncias` y `leopet_admin_fundaciones`.
+
+### `/admin/apelaciones` — Mediación y Aprobación de Desembolsos (HU8/HU11)
+- **Estado:** IMPLEMENTADA
+- Filtros por estado: Todas, Apeladas, Pendientes de desembolso, Mediadas, Desembolsadas (con contadores).
+- Tabla de liquidaciones con donador, evidencia, fundación, estrellas, escenario, subtotal neto y monto final.
+- Botón **"Mediar"**: modal con selector 0-5 estrellas y comentario obligatorio; muestra el "Nuevo monto estimado" en vivo y aplica `mediarPago` (recalcula `subtotalNeto × factor`, registra `montoAnterior`/`mediacionCalificacion`/`mediacionComentario` y notifica a donador y fundación). Estado → `mediada`.
+- Botón **"Aprobar desembolso"**: aplica `aprobarDesembolso` → estado `desembolsada` + notificación a la fundación.
 
 ---
 
@@ -296,7 +334,7 @@ Solo usuarios con `rol === 'fundacion'` pueden acceder. El enlace "Panel Fundaci
 ### `/fundacion` — Dashboard de Fundación
 - **Estado:** IMPLEMENTADA
 - Muestra 4 tarjetas de métricas: Mascotas, Evidencias Publicadas, Padrinos Activos, Aporte Mensual.
-- Accesos rápidos a `/fundacion/mascotas`, `/fundacion/evidencias`, `/fundacion/advertencias`.
+- Accesos rápidos a `/fundacion/mascotas`, `/fundacion/evidencias`, `/fundacion/advertencias` y **`/fundacion/pagos`** (muestra el monto pendiente de desembolso de la fundación).
 - Lista de evidencias recientes con estado.
 - Requiere `rol === 'fundacion'`; muestra pantalla de acceso restringido si no tiene permisos.
 
@@ -321,6 +359,12 @@ Solo usuarios con `rol === 'fundacion'` pueden acceder. El enlace "Panel Fundaci
 - 3 tarjetas de resumen: Padrinos Activos, Aporte Mensual, Pausados.
 - Tabla con todos los padrinos de la fundación: nombre, correo, mascota, monto mensual, estado, fecha de inicio.
 - Búsqueda por nombre o mascota.
+
+### `/fundacion/pagos` — Pagos y Apelación de Liquidaciones (HU8/HU11)
+- **Estado:** IMPLEMENTADA
+- Stats: pendiente de desembolso, desembolsado, apeladas (de la fundación logueada).
+- Tabla de liquidaciones: número, fecha, mascota/evidencia, estrellas, escenario, subtotal neto − comisión, monto final y estado.
+- Botón **"Apelar"** (solo en `pendiente_desembolso`): modal con motivo obligatorio → `apelarPago` (estado `apelada`) + notificación al donador.
 
 ### `/fundacion/advertencias` — Centro de Resolución de Reportes
 - **Estado:** IMPLEMENTADA

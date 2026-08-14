@@ -2,6 +2,11 @@ import React, { createContext, useContext, useState, useCallback, type ReactNode
 import { storage } from "../lib/storage";
 import type { Subscription } from "../lib/types";
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const COMISION = 0.15;
+
+export const montoGlobalDe = (s: Subscription): number => s.montoMensual ?? s.totalMonthly;
+
 interface SubscriptionContextType {
   subscriptions: Subscription[];
   addSubscription: (sub: Subscription) => void;
@@ -9,7 +14,7 @@ interface SubscriptionContextType {
   resumeSubscription: (subId: string) => void;
   cancelSubscription: (subId: string) => void;
   removePetFromSubscription: (subId: string, petId: string) => void;
-  updatePetAmountInSubscription: (subId: string, petId: string, amount: number) => void;
+  updateSubscriptionAmount: (subId: string, amount: number) => void;
   getActiveSubscriptions: () => Subscription[];
 }
 
@@ -54,7 +59,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const updated = prev.map((s) => {
         if (s.id !== subId) return s;
         const newPets = s.pets.filter((p) => p.petId !== petId);
-        return { ...s, pets: newPets, totalMonthly: newPets.reduce((a, p) => a + p.monthlyAmount, 0) };
+        if (newPets.length === 0) return s;
+        const global = montoGlobalDe(s);
+        const share = round2(global / newPets.length);
+        return {
+          ...s,
+          pets: newPets.map((p) => ({ ...p, monthlyAmount: share })),
+          totalMonthly: global,
+        };
       }).filter((s) => s.pets.length > 0);
       storage.setSubscriptions(updated);
       return updated;
@@ -69,12 +81,19 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const updatePetAmountInSubscription = useCallback((subId: string, petId: string, amount: number) => {
+  const updateSubscriptionAmount = useCallback((subId: string, amount: number) => {
     setSubscriptions((prev) => {
       const updated = prev.map((s) => {
         if (s.id !== subId) return s;
-        const newPets = s.pets.map((p) => (p.petId === petId ? { ...p, monthlyAmount: amount } : p));
-        return { ...s, pets: newPets, totalMonthly: newPets.reduce((a, p) => a + p.monthlyAmount, 0) };
+        const share = round2(amount / Math.max(s.pets.length, 1));
+        return {
+          ...s,
+          montoMensual: amount,
+          comision: round2(amount * COMISION),
+          subtotalNeto: round2(amount - amount * COMISION),
+          pets: s.pets.map((p) => ({ ...p, monthlyAmount: share })),
+          totalMonthly: amount,
+        };
       });
       storage.setSubscriptions(updated);
       return updated;
@@ -86,7 +105,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [subscriptions]);
 
   return (
-    <SubscriptionContext.Provider value={{ subscriptions, addSubscription, pauseSubscription, resumeSubscription, cancelSubscription, removePetFromSubscription, updatePetAmountInSubscription, getActiveSubscriptions }}>
+    <SubscriptionContext.Provider value={{ subscriptions, addSubscription, pauseSubscription, resumeSubscription, cancelSubscription, removePetFromSubscription, updateSubscriptionAmount, getActiveSubscriptions }}>
       {children}
     </SubscriptionContext.Provider>
   );

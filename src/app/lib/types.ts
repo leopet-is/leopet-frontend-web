@@ -63,8 +63,12 @@ export interface Subscription {
   id: string;
   userId: string;
   manadaId: string;
+  nombre?: string;
   pets: { petId: string; name: string; monthlyAmount: number; image: any }[];
   totalMonthly: number;
+  montoMensual?: number;
+  comision?: number;
+  subtotalNeto?: number;
   status: "active" | "paused";
   pausedUntil?: string;
   createdAt: string;

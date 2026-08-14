@@ -5,6 +5,8 @@ import { useManada } from '../context/ManadaContext';
 import { useFavoritos } from '../context/FavoritosContext';
 import { useAdmin } from '../context/AdminContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useSubscriptions } from '../context/SubscriptionContext';
+import { usePagos } from '../context/PagoContext';
 import { DashboardLayout } from './DashboardLayout';
 import { EvidenceCard } from '../components/EvidenceCard';
 import { MOCK_EVIDENCE } from '../lib/mockData';
@@ -22,9 +24,11 @@ const DENUNCIA_MOTIVOS = [
 export function DashboardEvidencias() {
   const { isAuthenticated, user } = useAuth();
   const { mascotas } = useManada();
+  const { subscriptions } = useSubscriptions();
   const { favoritos } = useFavoritos();
   const { denuncias, addDenuncia } = useAdmin();
   const { agregarNotificacion } = useNotifications();
+  const { pagos, registrarCalificacion } = usePagos();
   const [tab, setTab] = useState<"apadrinados" | "favoritas">("apadrinados");
 
   const [reportEvidencia, setReportEvidencia] = useState<typeof MOCK_EVIDENCE[0] | null>(null);
@@ -34,7 +38,10 @@ export function DashboardEvidencias() {
   const [ticketModal, setTicketModal] = useState<{ ticket: string; motivo: string; fundacionNombre: string } | null>(null);
   const [toast, setToast] = useState("");
 
-  const sponsoredIds = new Set(mascotas.map((a) => a.animalId));
+  const sponsoredIds = new Set([
+    ...mascotas.map((a) => a.animalId),
+    ...subscriptions.flatMap((s) => s.pets.map((p) => p.petId)),
+  ]);
 
   const misApadrinados = MOCK_EVIDENCE.filter((ev) => sponsoredIds.has(ev.mascotaId));
   const deFavoritas = MOCK_EVIDENCE.filter(
@@ -51,6 +58,28 @@ export function DashboardEvidencias() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
+  };
+
+  const handleRate = (ev: typeof MOCK_EVIDENCE[0], calificacion: number, comentario: string) => {
+    if (!user) return;
+    const sub = subscriptions.find((s) => s.pets.some((p) => p.petId === ev.mascotaId));
+    const donadorNombre = `${user.nombre || ""} ${user.apellido || ""}`.trim() || "Donador";
+    const pago = registrarCalificacion({
+      evidenciaId: ev.id,
+      evidenciaTitulo: ev.titulo,
+      evidenciaFecha: ev.fecha,
+      mascotaId: ev.mascotaId,
+      mascotaNombre: ev.mascotaNombre,
+      fundacionId: ev.fundacionId,
+      fundacionNombre: ev.fundacionNombre,
+      donadorId: user.id,
+      donadorNombre,
+      montoGlobal: sub?.montoMensual ?? sub?.totalMonthly ?? 50,
+      mascotasCount: sub?.pets.length ?? 1,
+      calificacion,
+      comentario: comentario.trim() || undefined,
+    });
+    showToast(`Calificación registrada — Liquidación ${pago.numero} por $${pago.montoReembolso.toFixed(2)}`);
   };
 
   const openReport = (ev: typeof MOCK_EVIDENCE[0]) => {
@@ -182,6 +211,10 @@ export function DashboardEvidencias() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {activeList.map((ev) => {
               const enRevision = evidenciaEnRevision.has(ev.id);
+              const pago = pagos.find((p) => p.evidenciaId === ev.id && p.estado !== "desembolsada");
+              const reembolsoLabel = pago
+                ? `Liquidación ${pago.numero}: $${pago.montoReembolso.toFixed(2)} (${pago.calificacion} ★ · ${(pago.factor * 100).toFixed(0)}%)`
+                : undefined;
               return (
                 <EvidenceCard
                   key={ev.id}
@@ -198,8 +231,9 @@ export function DashboardEvidencias() {
                   calificacion={ev.calificacion}
                   comentario={ev.comentario}
                   estado={enRevision ? "en_revision" : ev.estado}
-                  onRate={tab === "apadrinados" ? () => {} : undefined}
+                  onRate={tab === "apadrinados" ? (cal, com) => handleRate(ev, cal, com) : undefined}
                   onReport={tab === "apadrinados" ? () => openReport(ev) : undefined}
+                  reembolsoLabel={tab === "apadrinados" ? reembolsoLabel : undefined}
                 />
               );
             })}

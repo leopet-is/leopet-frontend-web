@@ -13,11 +13,13 @@ import { FundacionDetail } from "./components/FundacionDetail";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminSolicitudes } from "./pages/AdminSolicitudes";
 import { AdminDenuncias } from "./pages/AdminDenuncias";
+import { AdminApelaciones } from "./pages/AdminApelaciones";
 import { FoundationDashboard } from "./pages/FoundationDashboard";
 import { FoundationMascotas } from "./pages/FoundationMascotas";
 import { FoundationEvidencias } from "./pages/FoundationEvidencias";
 import { FoundationPadrinos } from "./pages/FoundationPadrinos";
 import { FoundationAdvertencias } from "./pages/FoundationAdvertencias";
+import { FoundationPagos } from "./pages/FoundationPagos";
 
 export const router = createBrowserRouter([
   {
@@ -77,6 +79,10 @@ export const router = createBrowserRouter([
         Component: AdminDenuncias,
       },
       {
+        path: "admin/apelaciones",
+        Component: AdminApelaciones,
+      },
+      {
         path: "fundacion",
         Component: FoundationDashboard,
       },
@@ -95,6 +101,10 @@ export const router = createBrowserRouter([
       {
         path: "fundacion/advertencias",
         Component: FoundationAdvertencias,
+      },
+      {
+        path: "fundacion/pagos",
+        Component: FoundationPagos,
       },
     ],
   },

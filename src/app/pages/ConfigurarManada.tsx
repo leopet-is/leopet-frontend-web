@@ -1,22 +1,32 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { ArrowLeft, Trash2, Heart, CreditCard, Lock, CheckCircle2, Edit3 } from 'lucide-react';
+import { ArrowLeft, Trash2, Heart, CreditCard, Lock, CheckCircle2, Edit3, Users, PieChart } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
 import { useAuth } from '../context/AuthContext';
 import { useSubscriptions } from '../context/SubscriptionContext';
 import { AuthModal } from '../components/AuthModal';
 import { PayPalCheckout } from '../components/PayPalCheckout';
+import { COMISION_PLATAFORMA } from '../lib/pagos';
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function ConfigurarManada() {
   const navigate = useNavigate();
-  const { mascotas, removeFromManada, updateAnimalAmount, totalMonthly, clearManada, nombre, setNombre } = useManada();
+  const { mascotas, removeFromManada, montoGlobal, setMontoGlobal, clearManada, nombre, setNombre } = useManada();
   const { isAuthenticated } = useAuth();
   const { addSubscription } = useSubscriptions();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPayPal, setShowPayPal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [editingName, setEditingName] = useState(false);
+
+  const mascotasCount = mascotas.length;
+  const montoPorMascota = mascotasCount > 0 ? round2(montoGlobal / mascotasCount) : 0;
+  const comision = round2(montoGlobal * COMISION_PLATAFORMA);
+  const subtotalNeto = round2(montoGlobal - comision);
+  const comisionPorMascota = round2(montoPorMascota * COMISION_PLATAFORMA);
+  const netoPorMascota = round2(montoPorMascota - comisionPorMascota);
 
   const handleConfirm = () => {
     if (!isAuthenticated) {
@@ -31,8 +41,12 @@ export function ConfigurarManada() {
       id: `sub-${Date.now()}`,
       userId: "user-1",
       manadaId: "mi-manada",
-      pets: mascotas.map((a) => ({ petId: a.animalId, name: a.nombre || "", monthlyAmount: a.montoMensual, image: a.imagenUrl })),
-      totalMonthly,
+      nombre,
+      pets: mascotas.map((a) => ({ petId: a.animalId, name: a.nombre || "", monthlyAmount: montoPorMascota, image: a.imagenUrl })),
+      montoMensual: montoGlobal,
+      comision,
+      subtotalNeto,
+      totalMonthly: montoGlobal,
       status: "active",
       createdAt: new Date().toISOString(),
     });
@@ -53,7 +67,7 @@ export function ConfigurarManada() {
             Gracias por convertirte en padrino. Has iniciado el apadrinamiento para{" "}
             <span className="font-semibold text-[#004955]">
               {mascotas.map((a) => a.nombre).join(", ")}
-            </span>. Recibirás reportes mensuales del progreso y salud.
+            </span>. Tu aporte de <span className="font-semibold text-[#004955]">${montoGlobal.toFixed(2)}/mes</span> se reparte de forma equitativa. Recibirás reportes mensuales del progreso y salud.
           </p>
           <div className="pt-4 flex flex-col gap-3">
             <Link to="/dashboard" className="bg-[#004955] hover:bg-[#00626d] text-white py-3 px-6 rounded-full font-medium transition-colors shadow-md">
@@ -79,7 +93,7 @@ export function ConfigurarManada() {
           Mi Manada — Configurar Apadrinamiento
         </h1>
         <p className="text-[#3e494a] text-sm mt-1">
-          Ajusta los montos mensuales y confirma tu apadrinamiento.
+          Define el monto mensual de tu manada; se reparte equitativamente entre las mascotas apadrinadas.
         </p>
       </div>
 
@@ -119,11 +133,53 @@ export function ConfigurarManada() {
             )}
           </div>
 
+          {/* Monto global */}
+          <div className="bg-white border border-[#BDC8CA]/40 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Monto mensual de tu manada</label>
+              <span className="text-[#004955] font-bold text-2xl">${montoGlobal.toFixed(2)} / mes</span>
+            </div>
+            <input
+              type="range"
+              min={20}
+              max={200}
+              step={5}
+              value={montoGlobal}
+              onChange={(e) => setMontoGlobal(Number(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-[#07c4e1]"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+              <span>$20</span>
+              <span>$200</span>
+            </div>
+
+            {mascotasCount > 0 && (
+              <div className="mt-4 bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-[#004955] font-semibold">
+                  <Users size={16} />
+                  Distribución equitativa ({mascotasCount} mascota{mascotasCount > 1 ? "s" : ""})
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Por mascota (aporte)</span>
+                  <span className="font-semibold text-[#004955]">${montoPorMascota.toFixed(2)} / mes</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Comisión plataforma ({(COMISION_PLATAFORMA * 100).toFixed(0)}%)</span>
+                  <span className="font-semibold text-[#ee5871]">-${comisionPorMascota.toFixed(2)} / mes</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal neto por mascota</span>
+                  <span className="font-semibold text-[#00626d]">${netoPorMascota.toFixed(2)} / mes</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <h2 className="text-[#004955] text-xl font-semibold mb-4">
-            Mascotas en tu manada ({mascotas.length})
+            Mascotas en tu manada ({mascotasCount})
           </h2>
 
-          {mascotas.length === 0 ? (
+          {mascotasCount === 0 ? (
             <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-10 text-center">
               <Heart size={40} className="mx-auto text-gray-300 mb-3" />
               <p className="text-gray-600 font-medium">Tu manada está vacía</p>
@@ -142,7 +198,7 @@ export function ConfigurarManada() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-[#1b1c1c] text-xl font-semibold">{animal.nombre}</h3>
                     <span className="text-[#004955] font-bold text-lg">
-                      ${animal.montoMensual.toFixed(2)} / mes
+                      ${montoPorMascota.toFixed(2)} / mes
                     </span>
                   </div>
 
@@ -150,19 +206,10 @@ export function ConfigurarManada() {
                     {animal.refugioNombre}
                   </p>
 
-                  <div className="flex items-center gap-3">
-                    <label className="text-xs font-medium text-gray-600 whitespace-nowrap">Monto mensual:</label>
-                    <input
-                      type="range"
-                      min={5}
-                      max={100}
-                      step={5}
-                      value={animal.montoMensual}
-                      onChange={(e) => updateAnimalAmount(animal.animalId, Number(e.target.value))}
-                      className="flex-1 h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-[#07c4e1]"
-                    />
-                    <span className="text-sm font-bold text-[#004955] w-16 text-right">${animal.montoMensual.toFixed(2)}</span>
-                  </div>
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                    <PieChart size={13} className="text-[#07c4e1]" />
+                    Reparto equitativo de tu manada — el monto se asigna a la manada, no por mascota.
+                  </p>
 
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs text-gray-600">
                     <span>{animal.etiqueta && <span className="px-2 py-0.5 rounded-full bg-[#004955]/10 text-[#004955] text-[10px] font-semibold">{animal.etiqueta}</span>}</span>
@@ -193,15 +240,27 @@ export function ConfigurarManada() {
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Mascotas:</span>
-                <span className="font-semibold text-[#004955]">{mascotas.length}</span>
+                <span className="font-semibold text-[#004955]">{mascotasCount}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Frecuencia:</span>
                 <span className="font-semibold text-[#004955]">Mensual Recurrente</span>
               </div>
+              <div className="flex justify-between text-gray-600 border-t border-gray-100 pt-3">
+                <span>Aporte mensual de tu manada:</span>
+                <span className="font-semibold text-[#004955]">${montoGlobal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Comisión plataforma (15%):</span>
+                <span className="font-semibold text-[#ee5871]">-${comision.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[#00626d] font-semibold">
+                <span>Subtotal neto para fundaciones:</span>
+                <span>${subtotalNeto.toFixed(2)}</span>
+              </div>
               <div className="flex justify-between text-[#004955] font-bold text-lg border-t border-gray-100 pt-3">
                 <span>Total mensual:</span>
-                <span>${totalMonthly.toFixed(2)} USD</span>
+                <span>${montoGlobal.toFixed(2)} USD</span>
               </div>
             </div>
 
@@ -212,16 +271,16 @@ export function ConfigurarManada() {
 
             {showPayPal ? (
               <PayPalCheckout
-                amount={totalMonthly}
+                amount={montoGlobal}
                 onSuccess={handlePaymentSuccess}
                 onCancel={() => setShowPayPal(false)}
               />
             ) : (
               <button
                 onClick={handleConfirm}
-                disabled={mascotas.length === 0}
+                disabled={mascotasCount === 0}
                 className={`w-full font-medium text-lg py-3.5 rounded-full transition-all flex items-center justify-center gap-2 shadow-md ${
-                  mascotas.length > 0
+                  mascotasCount > 0
                     ? "bg-[#07c4e1] hover:bg-[#06aec8] text-[#004955] cursor-pointer"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }`}

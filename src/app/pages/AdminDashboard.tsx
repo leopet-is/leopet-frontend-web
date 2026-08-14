@@ -1,23 +1,29 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { PawPrint, FileCheck, AlertTriangle, TrendingUp, ArrowRight } from 'lucide-react';
+import { PawPrint, FileCheck, AlertTriangle, TrendingUp, ArrowRight, Gavel, DollarSign } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
+import { usePagos } from '../context/PagoContext';
 import { AdminLayout } from './AdminLayout';
 
 export function AdminDashboard() {
   const { solicitudes, denuncias } = useAdmin();
+  const { pagos } = usePagos();
 
   const pendientes = solicitudes.filter((s) => s.estado === "Pendiente").length;
   const aprobadas = solicitudes.filter((s) => s.estado === "Aprobada").length;
   const rechazadas = solicitudes.filter((s) => s.estado === "Rechazada").length;
   const denunciasAbiertas = denuncias.filter((d) => d.estado === "pendiente" || d.estado === "investigando").length;
   const denunciasResueltas = denuncias.filter((d) => d.estado === "resuelta").length;
+  const apelaciones = pagos.filter((p) => p.estado === "apelada").length;
+  const montoPendiente = pagos
+    .filter((p) => p.estado === "pendiente_desembolso" || p.estado === "mediada" || p.estado === "apelada")
+    .reduce((sum, p) => sum + p.montoReembolso, 0);
 
   const stats = [
     { label: "Fundaciones Aprobadas", value: aprobadas, icon: <PawPrint size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
     { label: "Solicitudes Pendientes", value: pendientes, icon: <FileCheck size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
     { label: "Denuncias Abiertas", value: denunciasAbiertas, icon: <AlertTriangle size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
-    { label: "Denuncias Resueltas", value: denunciasResueltas, icon: <TrendingUp size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
+    { label: "Apelaciones", value: apelaciones, icon: <Gavel size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
   ];
 
   return (
@@ -54,6 +60,22 @@ export function AdminDashboard() {
                 <div className="flex-1">
                   <p className="text-[#004955] font-medium text-sm">Moderar Denuncias</p>
                   <p className="text-gray-500 text-xs">{denunciasAbiertas} denuncia{denunciasAbiertas !== 1 ? "s" : ""} abierta{denunciasAbiertas !== 1 ? "s" : ""}</p>
+                </div>
+                <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
+              </Link>
+              <Link to="/admin/apelaciones" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                <div className="bg-[#004955]/10 p-2 rounded-lg"><Gavel size={18} className="text-[#004955]" /></div>
+                <div className="flex-1">
+                  <p className="text-[#004955] font-medium text-sm">Mediar Apelaciones</p>
+                  <p className="text-gray-500 text-xs">{apelaciones} apelación{apelaciones !== 1 ? "es" : ""} · ${montoPendiente.toFixed(2)} pendiente de desembolso</p>
+                </div>
+                <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
+              </Link>
+              <Link to="/admin/apelaciones" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                <div className="bg-[#004955]/10 p-2 rounded-lg"><DollarSign size={18} className="text-[#004955]" /></div>
+                <div className="flex-1">
+                  <p className="text-[#004955] font-medium text-sm">Aprobar Desembolsos</p>
+                  <p className="text-gray-500 text-xs">Liquidaciones generadas por calificaciones de evidencias</p>
                 </div>
                 <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
               </Link>

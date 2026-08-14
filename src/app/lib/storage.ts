@@ -1,6 +1,8 @@
 const KEYS = {
   MANADA_CART: "leopet_manada_cart",
   MANADA_NOMBRE: "leopet_manada_nombre",
+  MANADA_MONTO: "leopet_manada_monto",
+  PAGOS: "leopet_pagos",
   USER: "leopet_user",
   SUBSCRIPTIONS: "leopet_subscriptions",
   FAVORITOS: "leopet_favoritos",
@@ -33,6 +35,29 @@ export const storage = {
 
   setManadaNombre: (nombre: string) => {
     localStorage.setItem(KEYS.MANADA_NOMBRE, nombre);
+  },
+
+  getManadaMonto: (): number | null => {
+    const data = localStorage.getItem(KEYS.MANADA_MONTO);
+    const parsed = data ? Number(data) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  },
+
+  setManadaMonto: (monto: number) => {
+    localStorage.setItem(KEYS.MANADA_MONTO, String(monto));
+  },
+
+  getPagos: (): any[] => {
+    try {
+      const data = localStorage.getItem(KEYS.PAGOS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  setPagos: (pagos: any[]) => {
+    localStorage.setItem(KEYS.PAGOS, JSON.stringify(pagos));
   },
 
   getUser: (): any | null => {

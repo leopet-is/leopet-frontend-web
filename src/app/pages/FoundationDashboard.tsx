@@ -1,11 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { PawPrint, Camera, Users, AlertTriangle, ArrowRight, DollarSign } from 'lucide-react';
+import { PawPrint, Camera, Users, AlertTriangle, ArrowRight, DollarSign, Wallet } from 'lucide-react';
 import { useFoundation } from '../context/FoundationContext';
+import { useAuth } from '../context/AuthContext';
+import { usePagos } from '../context/PagoContext';
 import { FoundationLayout } from './FoundationLayout';
 
 export function FoundationDashboard() {
   const { mascotas, evidencias, advertencias, padrinos } = useFoundation();
+  const { user } = useAuth();
+  const { pagos } = usePagos();
+
+  const fundacionId = user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03";
 
   const totalMascotas = mascotas.length;
   const totalEvidencias = evidencias.length;
@@ -14,6 +20,11 @@ export function FoundationDashboard() {
   const aporteMensual = padrinos
     .filter((p) => p.estado === "activo")
     .reduce((sum, p) => sum + p.montoMensual, 0);
+
+  const misPagos = pagos.filter((p) => p.fundacionId === fundacionId);
+  const montoPendiente = misPagos
+    .filter((p) => p.estado === "pendiente_desembolso" || p.estado === "apelada" || p.estado === "mediada")
+    .reduce((sum, p) => sum + p.montoReembolso, 0);
 
   const stats = [
     { label: "Mascotas", value: totalMascotas, icon: <PawPrint size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
@@ -56,6 +67,16 @@ export function FoundationDashboard() {
                 <div className="flex-1">
                   <p className="text-[#004955] font-medium text-sm">Publicar Evidencia</p>
                   <p className="text-gray-500 text-xs">{totalEvidencias} evidencia{totalEvidencias !== 1 ? "s" : ""} publicada{totalEvidencias !== 1 ? "s" : ""}</p>
+                </div>
+                <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
+              </Link>
+              <Link to="/fundacion/pagos" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                <div className="bg-[#004955]/10 p-2 rounded-lg"><Wallet size={18} className="text-[#004955]" /></div>
+                <div className="flex-1">
+                  <p className="text-[#004955] font-medium text-sm">Pagos y Desembolsos</p>
+                  <p className={`text-xs font-medium ${montoPendiente > 0 ? "text-amber-600" : "text-gray-500"}`}>
+                    {montoPendiente > 0 ? `$${montoPendiente.toFixed(2)} pendiente de desembolso` : "Sin montos pendientes"}
+                  </p>
                 </div>
                 <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
               </Link>

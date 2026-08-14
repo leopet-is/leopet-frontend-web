@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Star, AlertTriangle, MessageSquare } from "lucide-react";
+import { Star, AlertTriangle, MessageSquare, BadgeCheck } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface EvidenceCardProps {
@@ -18,6 +18,7 @@ interface EvidenceCardProps {
   estado?: "publicada" | "en_revision";
   onRate?: (calificacion: number, comentario: string) => void;
   onReport?: () => void;
+  reembolsoLabel?: string;
 }
 
 export function EvidenceCard({
@@ -36,6 +37,7 @@ export function EvidenceCard({
   estado,
   onRate,
   onReport,
+  reembolsoLabel,
 }: EvidenceCardProps) {
   const [calificacion, setCalificacion] = useState(initialCalificacion || 0);
   const [comentario, setComentario] = useState(initialComentario || "");
@@ -50,7 +52,6 @@ export function EvidenceCard({
 
   const handleComment = (value: string) => {
     setComentario(value);
-    onRate?.(calificacion, value);
   };
 
   return (
@@ -112,6 +113,13 @@ export function EvidenceCard({
                   className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#07c4e1] outline-none resize-none"
                 />
               </div>
+
+              {reembolsoLabel && (
+                <p className="text-xs text-[#00626d] font-medium flex items-center gap-1 bg-[#07c4e1]/5 border border-[#07c4e1]/15 rounded-lg px-3 py-2">
+                  <BadgeCheck size={14} />
+                  {reembolsoLabel}
+                </p>
+              )}
 
               {reported ? (
                 <p className="text-xs text-[#ffac13] font-medium flex items-center gap-1">

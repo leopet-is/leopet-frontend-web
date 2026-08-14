@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { BarChart3, PawPrint, Camera, Users, AlertTriangle, Building2, LogOut, ShieldBan } from 'lucide-react';
+import { BarChart3, PawPrint, Camera, Users, AlertTriangle, Building2, LogOut, ShieldBan, DollarSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFoundation } from '../context/FoundationContext';
 import { useAdmin } from '../context/AdminContext';
+import { usePagos } from '../context/PagoContext';
 
 export function FoundationLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -11,6 +12,7 @@ export function FoundationLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
   const { advertencias } = useFoundation();
   const { fundaciones } = useAdmin();
+  const { pagos } = usePagos();
 
   const fundacionId = user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03";
   const deshabilitada = fundaciones.find((f) => f.id === fundacionId)?.estado === "Deshabilitada";
@@ -59,12 +61,16 @@ export function FoundationLayout({ children }: { children: React.ReactNode }) {
   }
 
   const pendientes = advertencias.filter((a) => a.estado === "pendiente").length;
+  const pagosPendientes = pagos.filter(
+    (p) => p.fundacionId === fundacionId && (p.estado === "pendiente_desembolso" || p.estado === "apelada" || p.estado === "mediada")
+  ).length;
 
   const tabs = [
     { path: "/fundacion", label: "Resumen", icon: <BarChart3 size={18} />, exact: true },
     { path: "/fundacion/mascotas", label: "Mascotas", icon: <PawPrint size={18} /> },
     { path: "/fundacion/evidencias", label: "Evidencias", icon: <Camera size={18} /> },
     { path: "/fundacion/padrinos", label: "Padrinos", icon: <Users size={18} /> },
+    { path: "/fundacion/pagos", label: "Pagos", icon: <DollarSign size={18} />, badge: pagosPendientes },
     { path: "/fundacion/advertencias", label: "Alertas", icon: <AlertTriangle size={18} />, badge: pendientes },
   ];
 

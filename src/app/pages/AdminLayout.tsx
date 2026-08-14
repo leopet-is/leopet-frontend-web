@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { BarChart3, FileCheck, AlertTriangle, Shield, LogOut } from 'lucide-react';
+import { BarChart3, FileCheck, AlertTriangle, Gavel, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePagos } from '../context/PagoContext';
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { pagos } = usePagos();
 
   if (!isAuthenticated || user?.rol !== "admin") {
     return (
@@ -32,6 +34,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { path: "/admin", label: "Resumen", icon: <BarChart3 size={18} />, exact: true },
     { path: "/admin/solicitudes", label: "Solicitudes", icon: <FileCheck size={18} /> },
     { path: "/admin/denuncias", label: "Denuncias", icon: <AlertTriangle size={18} /> },
+    { path: "/admin/apelaciones", label: "Apelaciones", icon: <Gavel size={18} />, badge: pagos.filter((p) => p.estado === "apelada").length },
   ];
 
   return (
@@ -75,6 +78,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 >
                   {tab.icon}
                   {tab.label}
+                  {tab.badge && tab.badge > 0 && (
+                    <span className="bg-[#ee5871] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                      {tab.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
