@@ -6,6 +6,7 @@ const KEYS = {
   FAVORITOS: "leopet_favoritos",
   ADMIN_SOLICITUDES: "leopet_admin_solicitudes",
   ADMIN_DENUNCIAS: "leopet_admin_denuncias",
+  ADMIN_FUNDACIONES: "leopet_admin_fundaciones",
   FOUNDATION_MASCOTAS: "leopet_fundacion_mascotas",
   FOUNDATION_EVIDENCIAS: "leopet_fundacion_evidencias",
   FOUNDATION_ADVERTENCIAS: "leopet_fundacion_advertencias",
@@ -101,6 +102,19 @@ export const storage = {
 
   setDenuncias: (denuncias: any[]) => {
     localStorage.setItem(KEYS.ADMIN_DENUNCIAS, JSON.stringify(denuncias));
+  },
+
+  getFundaciones: (): any[] => {
+    try {
+      const data = localStorage.getItem(KEYS.ADMIN_FUNDACIONES);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  setFundaciones: (fundaciones: any[]) => {
+    localStorage.setItem(KEYS.ADMIN_FUNDACIONES, JSON.stringify(fundaciones));
   },
 
   getFoundationMascotas: (): any[] => {

@@ -17,6 +17,7 @@ interface FoundationContextType {
   addMascota: (mascota: Mascota) => void;
   updateMascota: (id: number, updates: Partial<Mascota>) => void;
   addEvidencia: (evidencia: Evidencia) => void;
+  updateEvidencia: (id: string, updates: Partial<Evidencia>) => void;
   updateAdvertencia: (id: string, updates: Partial<Advertencia>) => void;
 }
 
@@ -64,6 +65,14 @@ export function FoundationProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateEvidencia = useCallback((id: string, updates: Partial<Evidencia>) => {
+    setEvidencias((prev) => {
+      const updated = prev.map((e) => (e.id === id ? { ...e, ...updates } : e));
+      storage.setFoundationEvidencias(updated);
+      return updated;
+    });
+  }, []);
+
   const updateAdvertencia = useCallback((id: string, updates: Partial<Advertencia>) => {
     setAdvertencias((prev) => {
       const updated = prev.map((a) => (a.id === id ? { ...a, ...updates } : a));
@@ -73,7 +82,7 @@ export function FoundationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <FoundationContext.Provider value={{ mascotas, evidencias, advertencias, padrinos, addMascota, updateMascota, addEvidencia, updateAdvertencia }}>
+    <FoundationContext.Provider value={{ mascotas, evidencias, advertencias, padrinos, addMascota, updateMascota, addEvidencia, updateEvidencia, updateAdvertencia }}>
       {children}
     </FoundationContext.Provider>
   );
