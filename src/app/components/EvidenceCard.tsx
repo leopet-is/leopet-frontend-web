@@ -12,11 +12,12 @@ interface EvidenceCardProps {
   imagenUrl: any;
   fecha: string;
   canRate?: boolean;
+  canReport?: boolean;
   calificacion?: number | null;
   comentario?: string | null;
   estado?: "publicada" | "en_revision";
   onRate?: (calificacion: number, comentario: string) => void;
-  onReport?: (motivo: string) => void;
+  onReport?: () => void;
 }
 
 export function EvidenceCard({
@@ -29,6 +30,7 @@ export function EvidenceCard({
   imagenUrl,
   fecha,
   canRate = true,
+  canReport = true,
   calificacion: initialCalificacion,
   comentario: initialComentario,
   estado,
@@ -38,9 +40,8 @@ export function EvidenceCard({
   const [calificacion, setCalificacion] = useState(initialCalificacion || 0);
   const [comentario, setComentario] = useState(initialComentario || "");
   const [hoverCalificacion, setHoverCalificacion] = useState(0);
-  const [showReport, setShowReport] = useState(false);
-  const [motivo, setMotivo] = useState("");
-  const [reported, setReported] = useState(estado === "en_revision");
+
+  const reported = estado === "en_revision" || !canReport;
 
   const handleRate = (value: number) => {
     setCalificacion(value);
@@ -51,21 +52,6 @@ export function EvidenceCard({
     setComentario(value);
     onRate?.(calificacion, value);
   };
-
-  const handleReport = () => {
-    if (!motivo) return;
-    onReport?.(motivo);
-    setReported(true);
-    setShowReport(false);
-  };
-
-  const reportReasons = [
-    "Foto duplicada",
-    "Contenido sospechoso",
-    "No corresponde a la mascota",
-    "Calidad insuficiente",
-    "Otro",
-  ];
 
   return (
     <div className="bg-white border border-[#BDC8CA]/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -134,52 +120,12 @@ export function EvidenceCard({
                 </p>
               ) : (
                 <button
-                  onClick={() => setShowReport(!showReport)}
+                  onClick={onReport}
                   className="text-xs text-gray-400 hover:text-[#ee5871] font-medium flex items-center gap-1 transition-colors"
                 >
                   <AlertTriangle size={14} />
                   Reportar inconsistencia
                 </button>
-              )}
-
-              {showReport && (
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <p className="text-sm font-medium text-gray-700">Selecciona el motivo:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {reportReasons.map((reason) => (
-                      <button
-                        key={reason}
-                        onClick={() => setMotivo(reason)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          motivo === reason
-                            ? "bg-[#ee5871] text-white"
-                            : "bg-white border border-gray-200 text-gray-600 hover:border-[#ee5871]"
-                        }`}
-                      >
-                        {reason}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={() => { setShowReport(false); setMotivo(""); }}
-                      className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleReport}
-                      disabled={!motivo}
-                      className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        motivo
-                          ? "bg-[#ee5871] text-white hover:bg-[#d94a63]"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      Enviar Reporte
-                    </button>
-                  </div>
-                </div>
               )}
             </>
           ) : (
