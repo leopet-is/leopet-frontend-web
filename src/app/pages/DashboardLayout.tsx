@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router';
-import { PawPrint, BarChart3, LayoutGrid, Settings, CreditCard } from 'lucide-react';
+import { PawPrint, BarChart3, LayoutGrid, CreditCard, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSubscriptions } from '../context/SubscriptionContext';
 
@@ -26,6 +26,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const tabs = [
     { path: "/dashboard", label: "Resumen", icon: <BarChart3 size={18} />, exact: true },
     { path: "/dashboard/evidencias", label: "Evidencias", icon: <PawPrint size={18} /> },
+    { path: "/dashboard/denuncias", label: "Mis Denuncias", icon: <AlertTriangle size={18} /> },
     { path: "/dashboard/manada", label: "Mi Manada", icon: <LayoutGrid size={18} /> },
   ];
 

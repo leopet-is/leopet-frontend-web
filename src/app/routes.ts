@@ -7,6 +7,7 @@ import { ConfigurarManada } from "./pages/ConfigurarManada";
 import { Dashboard } from "./pages/Dashboard";
 import { DashboardEvidencias } from "./pages/DashboardEvidencias";
 import { DashboardManada } from "./pages/DashboardManada";
+import { DashboardDenuncias } from "./pages/DashboardDenuncias";
 import { FundacionesList } from "./components/FundacionesList";
 import { FundacionDetail } from "./components/FundacionDetail";
 import { AdminDashboard } from "./pages/AdminDashboard";
@@ -50,6 +51,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard/manada",
         Component: DashboardManada,
+      },
+      {
+        path: "dashboard/denuncias",
+        Component: DashboardDenuncias,
       },
       {
         path: "fundaciones",
