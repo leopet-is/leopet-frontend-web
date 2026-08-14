@@ -1,14 +1,19 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { BarChart3, PawPrint, Camera, Users, AlertTriangle, Building2, LogOut } from 'lucide-react';
+import { BarChart3, PawPrint, Camera, Users, AlertTriangle, Building2, LogOut, ShieldBan } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFoundation } from '../context/FoundationContext';
+import { useAdmin } from '../context/AdminContext';
 
 export function FoundationLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { advertencias } = useFoundation();
+  const { fundaciones } = useAdmin();
+
+  const fundacionId = user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03";
+  const deshabilitada = fundaciones.find((f) => f.id === fundacionId)?.estado === "Deshabilitada";
 
   if (!isAuthenticated || user?.rol !== "fundacion") {
     return (
@@ -19,6 +24,29 @@ export function FoundationLayout({ children }: { children: React.ReactNode }) {
           </div>
           <h2 className="text-[#004955] text-2xl font-bold">Acceso Restringido</h2>
           <p className="text-gray-500 max-w-sm">Esta sección es exclusiva para fundaciones aprobadas. Inicia sesión con una cuenta de fundación para continuar.</p>
+          <button
+            onClick={() => { logout(); navigate('/'); }}
+            className="inline-block bg-[#004955] text-white px-6 py-3 rounded-full font-medium hover:bg-[#00626d] transition-colors"
+          >
+            Volver al Inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (deshabilitada) {
+    return (
+      <div className="bg-white min-h-[calc(100vh-70px)] flex items-center justify-center p-6">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
+            <ShieldBan size={32} className="text-[#ee5871]" />
+          </div>
+          <h2 className="text-[#004955] text-2xl font-bold">Cuenta Deshabilitada</h2>
+          <p className="text-gray-500">
+            La cuenta de tu fundación fue deshabilitada por sanción administrativa (Sanción Máxima).
+            El acceso al panel está suspendido. Tienes derecho a apelación.
+          </p>
           <button
             onClick={() => { logout(); navigate('/'); }}
             className="inline-block bg-[#004955] text-white px-6 py-3 rounded-full font-medium hover:bg-[#00626d] transition-colors"

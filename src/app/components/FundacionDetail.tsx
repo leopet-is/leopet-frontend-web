@@ -1,9 +1,9 @@
 import React from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, MapPin, PawPrint, CheckCircle2, Heart } from 'lucide-react';
+import { ArrowLeft, MapPin, PawPrint, CheckCircle2, Heart, ShieldBan } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MOCK_FUNDACIONES } from '../../data/mockFundaciones';
 import { MOCK_MASCOTAS } from '../../data/mockMascotas';
+import { useAdmin } from '../context/AdminContext';
 import { useManada } from '../context/ManadaContext';
 import { useFavoritos } from '../context/FavoritosContext';
 
@@ -18,8 +18,10 @@ export function FundacionDetail() {
   const { id } = useParams<{ id: string }>();
   const { addToManada, mascotas: manadaMascotas } = useManada();
   const { isFavorito, toggleFavorito } = useFavoritos();
+  const { fundaciones } = useAdmin();
 
-  const fundacion = MOCK_FUNDACIONES.find((f) => f.id === id) || MOCK_FUNDACIONES[0];
+  const fundacion = fundaciones.find((f) => f.id === id) || fundaciones[0];
+  const deshabilitada = fundacion?.estado === "Deshabilitada";
   const mascotas = MOCK_MASCOTAS.filter((m) => m.fundacionId === fundacion.id);
   const favorita = isFavorito(fundacion.id);
 
@@ -93,6 +95,19 @@ export function FundacionDetail() {
 
       {/* Content */}
       <div className="max-w-[1248px] mx-auto px-4 md:px-[96px] py-10">
+        {deshabilitada && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-center gap-4 mb-8">
+            <div className="bg-red-100 p-3 rounded-xl flex-shrink-0">
+              <ShieldBan size={24} className="text-[#ee5871]" />
+            </div>
+            <div>
+              <p className="text-[#ee5871] font-semibold text-sm">Cuenta deshabilitada</p>
+              <p className="text-gray-500 text-xs mt-0.5">
+                Esta fundación fue deshabilitada por sanción administrativa. No se pueden realizar nuevos apadrinamientos.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* Info */}
           <div className="lg:col-span-5">
@@ -127,6 +142,10 @@ export function FundacionDetail() {
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={14} className="text-[#07c4e1]" />
                     <span>Estado: {fundacion.estadoSolicitud}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ShieldBan size={14} className={deshabilitada ? "text-[#ee5871]" : "text-[#07c4e1]"} />
+                    <span>Cuenta: {deshabilitada ? "Deshabilitada" : "Activa"}</span>
                   </div>
                 </div>
               </div>
@@ -184,15 +203,15 @@ export function FundacionDetail() {
                           <span className="text-xs text-gray-500">{mascota.ubicacion}</span>
                           <button
                             onClick={() => handleApadrinar(mascota)}
-                            disabled={isInManada}
+                            disabled={isInManada || deshabilitada}
                             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                              isInManada
+                              isInManada || deshabilitada
                                 ? "bg-gray-100 text-gray-400 cursor-default"
                                 : "bg-[#00626d] text-[#07c4e1] hover:bg-[#004955] cursor-pointer"
                             }`}
                           >
                             <Heart size={14} />
-                            {isInManada ? "En tu manada" : "Apadrinar"}
+                            {isInManada ? "En tu manada" : deshabilitada ? "No disponible" : "Apadrinar"}
                           </button>
                         </div>
                       </div>

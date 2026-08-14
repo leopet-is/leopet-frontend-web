@@ -3,16 +3,18 @@ import { Link } from 'react-router';
 import { motion } from "motion/react";
 import { MapPin, PawPrint, Building2, Heart } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MOCK_FUNDACIONES } from '../../data/mockFundaciones';
 import { useFavoritos } from '../context/FavoritosContext';
+import { useAdmin } from '../context/AdminContext';
+import { ShieldBan } from 'lucide-react';
 
 export function FundacionesList() {
   const { isFavorito, toggleFavorito } = useFavoritos();
+  const { fundaciones } = useAdmin();
   const [filtro, setFiltro] = useState<"todas" | "favoritas">("todas");
 
   const fundacionesFiltradas = filtro === "favoritas"
-    ? MOCK_FUNDACIONES.filter((f) => isFavorito(f.id))
-    : MOCK_FUNDACIONES;
+    ? fundaciones.filter((f) => isFavorito(f.id))
+    : fundaciones;
 
   return (
     <div className="bg-white min-h-screen pb-20">
@@ -82,6 +84,59 @@ export function FundacionesList() {
                     <Heart size={16} className={isFavorito(fundacion.id) ? "fill-white" : ""} />
                   </button>
 
+                  {fundacion.estado === "Deshabilitada" && (
+                    <span className="absolute top-4 left-4 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ee5871] text-white text-xs font-semibold">
+                      <ShieldBan size={14} />
+                      Cuenta deshabilitada
+                    </span>
+                  )}
+
+                  {fundacion.estado === "Deshabilitada" ? (
+                    <div className="block opacity-70 pointer-events-none">
+                      <div className="relative h-[220px] overflow-hidden">
+                        <ImageWithFallback
+                          src={fundacion.portadaUrl}
+                          alt={fundacion.nombre}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white flex-shrink-0 bg-white">
+                              <ImageWithFallback
+                                src={fundacion.logoUrl}
+                                alt={`Logo ${fundacion.nombre}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div>
+                              <h3 className="text-white text-xl font-bold leading-tight">{fundacion.nombre}</h3>
+                              <div className="flex items-center gap-1 text-white/80 text-xs">
+                                <MapPin size={12} />
+                                {fundacion.ubicacion}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-6 flex flex-col gap-4 flex-grow">
+                        <p className="text-[#3e494a] text-sm leading-relaxed line-clamp-2">
+                          {fundacion.descripcionCorta}
+                        </p>
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
+                          <div className="flex items-center gap-2 text-[#004955]">
+                            <PawPrint size={16} />
+                            <span className="text-sm font-semibold">
+                              {fundacion.cantidadMascotasCuidado} mascotas
+                            </span>
+                          </div>
+                          <span className="text-[#ee5871] text-sm font-semibold">
+                            Bloqueada
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                   <Link
                     to={`/fundaciones/${fundacion.id}`}
                     className="block"
@@ -131,6 +186,7 @@ export function FundacionesList() {
                       </div>
                     </div>
                   </Link>
+                  )}
                 </div>
               </motion.div>
             ))}
