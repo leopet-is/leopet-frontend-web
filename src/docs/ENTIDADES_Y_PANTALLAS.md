@@ -39,6 +39,7 @@
 | `logoUrl` | string | Sí | URL/import del logo |
 | `portadaUrl` | string | Sí | URL/import de portada |
 | `estadoSolicitud` | enum | Sí | `'Aprobada'` \| `'Pendiente'` \| `'Rechazada'` |
+| `estado` | enum | Sí | `'Activa'` \| `'Deshabilitada'` — Estado de la cuenta (solicitudes aprobadas inician `'Activa'`; el Admin puede deshabilitarla como Sanción Máxima) |
 | `cantidadMascotasCuidado` | number | Sí | Número de mascotas bajo cuidado |
 
 ### Mascota (`src/types/mascota.js`)
@@ -159,7 +160,17 @@
 - **Estado:** IMPLEMENTADA
 - Renderiza la lista de evidencias asociadas.
 - Permite calificar con 1-5 estrellas y agregar comentario.
-- Botón **"Reportar Inconsistencia"**: Abre modal para seleccionar motivo y cambia el estado visual de la evidencia a `'en_revision'`.
+- Botón **"Reportar inconsistencia"** (HU12): abre modal con motivo (Fraude, Maltrato animal, Foto duplicada, No corresponde a la mascota, Calidad insuficiente, Otro), descripción obligatoria y carga de archivos adjuntos.
+- Al enviar: registra la `Denuncia` en `leopet_admin_denuncias` con estado `pendiente` y Nro. de Ticket `LP-####`, notifica al administrador y muestra confirmación con el ticket.
+- La evidencia reportada cambia a estado `en_revision` mientras exista una denuncia abierta.
+
+### `/dashboard/denuncias` — Mis Denuncias (HU12/HU9)
+- **Estado:** IMPLEMENTADA
+- Resumen de denuncias abiertas, resueltas y rechazadas del donador logueado.
+- Lista de denuncias con ticket, fundación, motivo, estado y fecha.
+- Muestra la resolución: Sanción de Estrellas (estrellas y monto recalculado con factor 0.67), Deshabilitación de Cuenta o Rechazo, con el comentario del administrador.
+- Muestra el aviso **"Decisión revertida"** cuando el Admin revierte la resolución (HU10).
+- Botón **"Nueva denuncia"**: redirige a `/dashboard/evidencias`.
 
 ### `/dashboard/manada` — Gestión de Suscripción
 - **Estado:** IMPLEMENTADA
@@ -193,17 +204,29 @@
 ### Denuncia (`src/types/denuncia.js`)
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
-| `id` | string | Sí | Prefijo `den-` |
+| `id` | number | Sí | PK auto-increment |
+| `ticket` | string | Sí | Nro. de Ticket público (`LP-0001`) asignado al crear (HU12) |
+| `motivo` | string | Sí | Motivo del reporte (Fraude, Maltrato animal, Calidad insuficiente...) |
+| `descripcion` | string | Sí | Explicación detallada del donador (HU12) |
+| `pruebasUrls` | string[] | No | Archivos / capturas de respaldo (HU12) |
+| `evidenciaId` | string | No | FK a la evidencia cuestionada (vista unificada HU8/HU9) |
+| `usuarioId` | string | Sí | FK al usuario donador |
+| `donadorNombre` | string | Sí | Nombre del donador (display) |
 | `fundacionId` | string | Sí | FK a la Fundación reportada |
-| `fundacionNombre` | string | Sí | Nombre de la Fundación |
-| `donadorId` | string | Sí | ID del usuario donador que reporta |
-| `donadorNombre` | string | Sí | Nombre del donador |
-| `motivo` | string | Sí | Motivo del reporte |
-| `descripcion` | string | Sí | Explicación detallada |
-| `pruebasUrls` | string[] | No | Capturas o imágenes de respaldo |
-| `fecha` | string | Sí | Formato `YYYY-MM-DD` |
+| `fundacionNombre` | string | Sí | Nombre de la Fundación (display) |
 | `estado` | enum | Sí | `'pendiente'` \| `'investigando'` \| `'resuelta'` \| `'rechazada'` |
+| `resolucionTipo` | enum | No | `'sancion_estrellas'` \| `'deshabilitacion'` — Escenario aplicado |
+| `calificacionAnterior` | number | No | Escenario A: estrellas previas de la evidencia |
+| `calificacionNueva` | number | No | Escenario A: estrellas ajustadas |
+| `montoOriginal` | number | No | Escenario A: aporte antes de la sanción |
+| `montoAjustado` | number | No | Escenario A: aporte tras factor 0.67 |
 | `resolucionAdmin` | string | No | Comentario final del administrador |
+| `auditoria` | AuditoriaDenuncia[] | Sí | Log de acciones (HU6) |
+| `revertida` | boolean | No | TRUE si la decisión fue revertida (HU10) |
+| `fecha` | string | Sí | Fecha de la denuncia (ISO) |
+
+**AuditoriaDenuncia:** `{ accion: string, fecha: string, detalle?: string }` — registro cronológico de la
+creación, investigación, sanción/rechazo y reversión de cada denuncia (HU6).
 
 ### `/admin` — Dashboard del Administrador
 - **Estado:** IMPLEMENTADA
@@ -222,16 +245,20 @@
 - Botón **"Rechazar"**: abre modal con campo obligatorio de motivo, cambia estado a `Rechazada` + toast.
 - Persistencia: `localStorage` clave `leopet_admin_solicitudes`.
 
-### `/admin/denuncias` — Moderación de Denuncias
+### `/admin/denuncias` — Moderación de Denuncias (HU8/HU9/HU6/HU10)
 - **Estado:** IMPLEMENTADA
-- Grid de tarjetas con todas las denuncias.
-- Filtros: Todas, Pendiente, Investigando, Resuelta, Rechazada.
-- Búsqueda por motivo o nombre de fundación.
-- Modal de detalle con información completa + acciones de estado.
-- Botón **"Investigar"**: cambia estado a `investigando`.
-- Botón **"Rechazar"**: cambia estado a `rechazada` + toast.
-- Botón **"Marcar Resuelta"**: abre modal con textarea para `resolucionAdmin`, cambia estado a `resuelta`.
-- Persistencia: `localStorage` clave `leopet_admin_denuncias`.
+- Grid de tarjetas con todas las denuncias (ticket, fundación, donador, motivo y estado).
+- Filtros: Todas, Pendiente, En investigación, Resuelta, Rechazada (con contadores).
+- Búsqueda por motivo, nombre de fundación o ticket.
+- **Vista unificada "Evidencia vs. Denuncia"** (HU8/HU9): modal de detalle que compara la evidencia original (imagen, estrellas, título, mascota) con el sustento de la denuncia (motivo, descripción, adjuntos, donador).
+- **Investigar** (HU8): pasa la denuncia a `investigando` y la registra en auditoría.
+- **Escenario A — Sanción Manual (Ajuste de Estrellas):** el Admin ajusta la calificación de la evidencia (ej. 5 → 2); el sistema recalcula el reembolso (`Monto × Factor 0.67`) y actualiza el monto final del aporte. Estado → `resuelta` (`resolucionTipo: sancion_estrellas`).
+- **Escenario B — Deshabilitación de Cuenta (HU4):** confirma falta gravísima, cambia la `Fundacion.estado` a `Deshabilitada` y marca la denuncia como `resuelta` (`resolucionTipo: deshabilitacion`, "Válida — Sanción Máxima").
+- **Escenario C — Rechazo:** con motivo obligatorio, estado → `rechazada`.
+- **Auditoría (HU6):** cada acción queda registrada con fecha y detalle en `denuncia.auditoria`.
+- **Notificaciones (HU9):** al resolver o revertir se notifica al donador y a la fundación (medida tomada + derecho a apelación).
+- **Reversión por Error Administrativo (HU10):** botón **"Revertir decisión"** en denuncias resueltas/rechazadas; restaura los estados previos (cuenta de la fundación → `Activa`, calificación de la evidencia → anterior, monto → original), marca `revertida` y notifica el cambio.
+- Persistencia: `localStorage` clave `leopet_admin_denuncias` y `leopet_admin_fundaciones`.
 
 ---
 
@@ -249,6 +276,7 @@ Solo usuarios con `rol === 'fundacion'` pueden acceder. El enlace "Panel Fundaci
 ### Reglas Generales de Persistencia Fundación
 - **Persistencia Local:** Las mascotas creadas, evidencias publicadas y advertencias atendidas se sincronizan en `localStorage` bajo las claves `leopet_fundacion_mascotas`, `leopet_fundacion_evidencias` y `leopet_fundacion_advertencias`.
 - **Autenticación Fundación:** Las rutas `/fundacion/*` requieren que el usuario logueado en `leopet_user` tenga el rol `'fundacion'`.
+- **Cuenta deshabilitada (Escenario B / Sanción Máxima):** si la `Fundacion.estado` es `Deshabilitada`, el panel `/fundacion/*` muestra una pantalla de acceso restringido con aviso de apelación.
 
 ### Advertencia (`src/types/advertencia.js`)
 | Campo | Tipo | Requerido | Descripción |
