@@ -12,5 +12,6 @@
  * @property {string} logoUrl                // URL/import del logo
  * @property {string} portadaUrl             // URL/import de portada
  * @property {'Aprobada' | 'Pendiente' | 'Rechazada'} estadoSolicitud
+ * @property {'Activa' | 'Deshabilitada'} estado  // Estado de la cuenta (Escenario B: sanción máxima)
  * @property {number} cantidadMascotasCuidado
  */

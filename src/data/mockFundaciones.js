@@ -21,6 +21,7 @@ export const MOCK_FUNDACIONES = [
     logoUrl: imgPluto,
     portadaUrl: imgMain,
     estadoSolicitud: "Aprobada",
+    estado: "Activa",
     cantidadMascotasCuidado: 24,
   },
   {
@@ -36,6 +37,7 @@ export const MOCK_FUNDACIONES = [
     logoUrl: imgMain,
     portadaUrl: imgFood,
     estadoSolicitud: "Aprobada",
+    estado: "Activa",
     cantidadMascotasCuidado: 18,
   },
   {
@@ -50,6 +52,7 @@ export const MOCK_FUNDACIONES = [
     logoUrl: imgJasper,
     portadaUrl: imgPlay,
     estadoSolicitud: "Aprobada",
+    estado: "Activa",
     cantidadMascotasCuidado: 31,
   },
 ];
