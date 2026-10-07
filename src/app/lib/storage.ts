@@ -4,6 +4,7 @@ const KEYS = {
   MANADA_MONTO: "leopet_manada_monto",
   PAGOS: "leopet_pagos",
   USER: "leopet_user",
+  TOKEN: "leopet_token",
   SUBSCRIPTIONS: "leopet_subscriptions",
   FAVORITOS: "leopet_favoritos",
   ADMIN_SOLICITUDES: "leopet_admin_solicitudes",
@@ -74,6 +75,22 @@ export const storage = {
       localStorage.setItem(KEYS.USER, JSON.stringify(user));
     } else {
       localStorage.removeItem(KEYS.USER);
+    }
+  },
+  
+  getToken: (): string | null => {
+    try {
+      return localStorage.getItem(KEYS.TOKEN);
+    } catch {
+      return null;
+    }
+  },
+
+  setToken: (token: string | null) => {
+    if (token) {
+      localStorage.setItem(KEYS.TOKEN, token);
+    } else {
+      localStorage.removeItem(KEYS.TOKEN);
     }
   },
 
