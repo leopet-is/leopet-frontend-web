@@ -1,20 +1,26 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
+import { esCedulaValida, esTelefonoEcuador, esRucValido } from '../lib/validators';
+import isEmail from "validator/lib/isEmail";
+import { crearSolicitud } from '../api/fundaciones.api';
+
 
 interface FormData {
   foundationName: string;
   ruc: string;
-  email: string;
   address: string;
+  phone: string;
+  contactEmail: string;
   contactFirstName: string;
   contactLastName: string;
-  phone: string;
+  contactCedula: string;
   additionalInfo: string;
 }
 
 interface FormErrors {
-  [key: string]: string;
+  [key: string]: string | undefined;
+  form?: string;
 }
 
 export function RegistrationForm() {
@@ -22,11 +28,12 @@ export function RegistrationForm() {
   const [formData, setFormData] = useState<FormData>({
     foundationName: "",
     ruc: "",
-    email: "",
     address: "",
+    phone: "",
+    contactEmail: "",
     contactFirstName: "",
     contactLastName: "",
-    phone: "",
+    contactCedula: "",
     additionalInfo: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -46,43 +53,60 @@ export function RegistrationForm() {
 
   const validate = (): boolean => {
     const e: FormErrors = {};
+
     if (!formData.foundationName.trim()) e.foundationName = "El nombre es obligatorio";
     if (!formData.ruc.trim()) e.ruc = "El RUC es obligatorio";
-    else if (!/^\d{13}$/.test(formData.ruc.replace(/\D/g, ""))) e.ruc = "El RUC debe tener 13 dígitos";
-    if (!formData.email.trim()) e.email = "El correo es obligatorio";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) e.email = "Ingresa un correo válido";
+    else if (!esRucValido(formData.ruc)) e.ruc = "El RUC ingresado no es válido";
+    if (!formData.contactEmail.trim()) e.contactEmail = "El correo es obligatorio";
+    else if (!isEmail(formData.contactEmail.trim())) e.contactEmail = "Ingresa un correo válido";
     if (!formData.address.trim()) e.address = "La dirección es obligatoria";
     if (!formData.contactFirstName.trim()) e.contactFirstName = "El nombre es obligatorio";
     if (!formData.contactLastName.trim()) e.contactLastName = "El apellido es obligatorio";
     if (!formData.phone.trim()) e.phone = "El teléfono es obligatorio";
-    else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ""))) e.phone = "El teléfono debe tener 10 dígitos";
+    else if (!esTelefonoEcuador(formData.phone)) e.phone = "Ingresa un número de teléfono válido";
+    if (!formData.contactCedula.trim()) e.contactCedula = "La cédula es obligatoria";
+    else if (!esCedulaValida(formData.contactCedula)) e.contactCedula = "La cédula ingresada no es válida";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
-
-    addSolicitud({
-      id: `sol-${Date.now()}`,
-      fundacionNombre: formData.foundationName.trim(),
-      ruc: formData.ruc.replace(/\D/g, ""),
-      correo: formData.email.trim(),
-      representanteLegal: `${formData.contactFirstName.trim()} ${formData.contactLastName.trim()}`,
-      telefono: formData.phone.replace(/\D/g, ""),
-      direccion: formData.address.trim(),
-      ubicacion: "Ecuador",
-      fechaSolicitud: new Date().toISOString().split("T")[0],
-      estado: "Pendiente",
-      documentosUrls: [],
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.form;
+      return next;
     });
 
-    setIsSubmitting(false);
-    setIsSuccess(true);
+    try {
+      const payload = {
+        ruc: formData.ruc,
+        nombre: formData.foundationName,
+        direccion: formData.address,
+        telefono: formData.phone,
+        email_contacto: formData.contactEmail,
+        nombre_contacto: formData.contactFirstName,
+        apellido_contacto: formData.contactLastName,
+        cedula_contacto: formData.contactCedula,
+        comentarios: formData.additionalInfo,
+      };
+
+      const respuesta = await crearSolicitud(payload); 
+      setIsSuccess(true);
+
+    } catch (error: any) {
+      console.error("Error en submit:", error);
+      setErrors((prev) => ({ 
+        ...prev, 
+        form: error.message || "Ocurrió un error al conectar con el servidor. Intenta de nuevo." 
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputClass = (field: string) =>
@@ -107,7 +131,7 @@ export function RegistrationForm() {
           </p>
           <p className="text-gray-500 text-sm mb-8">
             Nuestro equipo revisará la información y te contactaremos al correo{" "}
-            <span className="font-medium text-[#004955]">{formData.email}</span>{" "}
+            <span className="font-medium text-[#004955]">{formData.contactEmail}</span>{" "}
             en un plazo de 2-3 días hábiles.
           </p>
           <div className="bg-gray-50 border border-[#BDC8CA]/40 rounded-2xl p-6 text-left space-y-3">
@@ -150,6 +174,7 @@ export function RegistrationForm() {
 
         <form onSubmit={handleSubmit} className="space-y-8" noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* --- Datos de la fundación --- */}
             <div className="space-y-6">
               <h3 className="text-[#0598ae] text-[24px] font-semibold uppercase mb-4">Datos de la fundación</h3>
 
@@ -176,24 +201,10 @@ export function RegistrationForm() {
                   inputMode="numeric"
                   value={formData.ruc}
                   onChange={(e) => updateField("ruc", e.target.value.replace(/\D/g, "").slice(0, 13))}
-                  placeholder="0987654321001"
+                  placeholder="1710034065001"
                   className={inputClass("ruc")}
                 />
                 {errors.ruc && <p className="text-red-500 text-xs mt-1">{errors.ruc}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[#004955] text-[18px] font-medium block">
-                  Correo de la fundación <span className="text-[#ee5871]">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => updateField("email", e.target.value)}
-                  placeholder="correo@fundacion.org"
-                  className={inputClass("email")}
-                />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
@@ -209,8 +220,24 @@ export function RegistrationForm() {
                 />
                 {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
               </div>
+              
+              <div className="space-y-2">
+                <label className="text-[#004955] text-[18px] font-medium block">
+                  Teléfono de la fundación <span className="text-[#ee5871]">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formData.phone}
+                  onChange={(e) => updateField("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="0987654321"
+                  className={inputClass("phone")}
+                />
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+              </div>
             </div>
 
+            {/* --- Persona de contacto --- */}
             <div className="space-y-6">
               <h3 className="text-[#0598ae] text-[24px] font-semibold uppercase mb-4">Persona de contacto</h3>
 
@@ -245,17 +272,31 @@ export function RegistrationForm() {
 
               <div className="space-y-2">
                 <label className="text-[#004955] text-[18px] font-medium block">
-                  Teléfono de contacto <span className="text-[#ee5871]">*</span>
+                  Cédula <span className="text-[#ee5871]">*</span>
                 </label>
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={formData.phone}
-                  onChange={(e) => updateField("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  placeholder="0987654321"
-                  className={inputClass("phone")}
+                  value={formData.contactCedula}
+                  onChange={(e) => updateField("contactCedula", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="0912345678"
+                  className={inputClass("contactCedula")}
                 />
-                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                {errors.contactCedula && <p className="text-red-500 text-xs mt-1">{errors.contactCedula}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[#004955] text-[18px] font-medium block">
+                  Correo del contacto <span className="text-[#ee5871]">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(e) => updateField("contactEmail", e.target.value)}
+                  placeholder="correo@contacto.com"
+                  className={inputClass("contactEmail")}
+                />
+                {errors.contactEmail && <p className="text-red-500 text-xs mt-1">{errors.contactEmail}</p>}
               </div>
 
               <div className="space-y-2">

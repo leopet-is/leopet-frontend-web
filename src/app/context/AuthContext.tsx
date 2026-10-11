@@ -89,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  
+
   const register = useCallback(
     async (
       nombre: string,
