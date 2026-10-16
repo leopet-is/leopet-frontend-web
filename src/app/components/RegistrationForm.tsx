@@ -172,7 +172,7 @@ export function RegistrationForm() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-8" noValidate autoComplete="off">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* --- Datos de la fundación --- */}
             <div className="space-y-6">
@@ -200,6 +200,8 @@ export function RegistrationForm() {
                   type="text"
                   inputMode="numeric"
                   value={formData.ruc}
+                  name="ruc"
+                  autoComplete="off"
                   onChange={(e) => updateField("ruc", e.target.value.replace(/\D/g, "").slice(0, 13))}
                   placeholder="1710034065001"
                   className={inputClass("ruc")}
@@ -213,6 +215,8 @@ export function RegistrationForm() {
                 </label>
                 <input
                   type="text"
+                  name="address"
+                  autoComplete="street-address"
                   value={formData.address}
                   onChange={(e) => updateField("address", e.target.value)}
                   placeholder="Av. Avenida 1234 y Calle, Guayaquil, Guayas"
@@ -227,6 +231,8 @@ export function RegistrationForm() {
                 </label>
                 <input
                   type="text"
+                  name="phone"
+                  autoComplete="tel" 
                   inputMode="numeric"
                   value={formData.phone}
                   onChange={(e) => updateField("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
@@ -248,6 +254,8 @@ export function RegistrationForm() {
                   </label>
                   <input
                     type="text"
+                    name="contactFirstName"
+                    autoComplete="given-name"
                     value={formData.contactFirstName}
                     onChange={(e) => updateField("contactFirstName", e.target.value)}
                     placeholder="Fulano"
@@ -261,6 +269,8 @@ export function RegistrationForm() {
                   </label>
                   <input
                     type="text"
+                    name="contactLastName"
+                    autoComplete="family-name"
                     value={formData.contactLastName}
                     onChange={(e) => updateField("contactLastName", e.target.value)}
                     placeholder="De Tal"
@@ -276,6 +286,8 @@ export function RegistrationForm() {
                 </label>
                 <input
                   type="text"
+                  name="contactCedula"
+                  autoComplete="off"
                   inputMode="numeric"
                   value={formData.contactCedula}
                   onChange={(e) => updateField("contactCedula", e.target.value.replace(/\D/g, "").slice(0, 10))}
@@ -291,6 +303,8 @@ export function RegistrationForm() {
                 </label>
                 <input
                   type="email"
+                  name="contactEmail"
+                  autoComplete="email"
                   value={formData.contactEmail}
                   onChange={(e) => updateField("contactEmail", e.target.value)}
                   placeholder="correo@contacto.com"
@@ -302,6 +316,7 @@ export function RegistrationForm() {
               <div className="space-y-2">
                 <label className="text-[#004955] text-[18px] font-medium block">Información adicional</label>
                 <textarea
+                  name="additionalInfo"
                   value={formData.additionalInfo}
                   onChange={(e) => updateField("additionalInfo", e.target.value)}
                   placeholder="Proporcione cualquier información adicional que nos ayude a verificar su fundación..."

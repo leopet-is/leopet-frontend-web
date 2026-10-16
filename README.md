@@ -25,3 +25,6 @@
 | Fundación (Leopet) | `leopet@gmail.com` | `Leopet2025!` |
 
 ---
+## Documentación de Rutas
+https://leopet-backend.onrender.com/api-docs#description/introduction
+
