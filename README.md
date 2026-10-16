@@ -15,8 +15,6 @@
 
 ## Credenciales de prueba
 
-Los datos de ejemplo pueden cargarse con `npm run db:migrate` y luego opcionalmente con `node scripts/seed-v2.js` (posterior a las migraciones).
-
 | Rol | Email | Contraseña |
 |---|---|---|
 | Administrador | `admin@gmail.com` | `Leopet2025!` |
