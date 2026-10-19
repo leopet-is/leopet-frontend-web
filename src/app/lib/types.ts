@@ -55,8 +55,14 @@ export interface User {
   apellido: string;
   correo: string;
   cedula?: string;
+  telefono?: string;
   rol: "donador" | "fundacion" | "admin";
-  estaActivo: boolean;
+  fundacionId?: number | string | null;
+  fundacionNombre?: string;
+  estaActivo?: boolean;
+  estatus: "ACTIVO" | "INACTIVO" | "BLOQUEADO" | "PENDIENTE_ACTIVACION";
+  sesionActiva?: boolean;
+  createdAt?: string;
 }
 
 export interface Subscription {

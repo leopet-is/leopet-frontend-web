@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { BarChart3, FileCheck, AlertTriangle, Gavel, Shield, LogOut } from 'lucide-react';
+import { BarChart3, FileCheck, AlertTriangle, Gavel, Shield, LogOut, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePagos } from '../context/PagoContext';
 
@@ -35,6 +35,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { path: "/admin/solicitudes", label: "Solicitudes", icon: <FileCheck size={18} /> },
     { path: "/admin/denuncias", label: "Denuncias", icon: <AlertTriangle size={18} /> },
     { path: "/admin/apelaciones", label: "Apelaciones", icon: <Gavel size={18} />, badge: pagos.filter((p) => p.estado === "apelada").length },
+    { path: "/admin/usuarios", label: "Usuarios", icon: <Users size={18} /> },
   ];
 
   return (

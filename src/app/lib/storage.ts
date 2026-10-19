@@ -1,3 +1,5 @@
+import type { User } from "./types";
+
 const KEYS = {
   MANADA_CART: "leopet_manada_cart",
   MANADA_NOMBRE: "leopet_manada_nombre",
@@ -14,6 +16,7 @@ const KEYS = {
   FOUNDATION_EVIDENCIAS: "leopet_fundacion_evidencias",
   FOUNDATION_ADVERTENCIAS: "leopet_fundacion_advertencias",
   NOTIFICACIONES: "leopet_notificaciones",
+  ADMIN_USUARIOS: "leopet_admin_usuarios",
 } as const;
 
 export const storage = {
@@ -76,6 +79,19 @@ export const storage = {
     } else {
       localStorage.removeItem(KEYS.USER);
     }
+  },
+
+  getUserList: (): User[] => {
+    try {
+      const data = localStorage.getItem(KEYS.ADMIN_USUARIOS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  setUserList: (users: User[]) => {
+    localStorage.setItem(KEYS.ADMIN_USUARIOS, JSON.stringify(users));
   },
   
   getToken: (): string | null => {

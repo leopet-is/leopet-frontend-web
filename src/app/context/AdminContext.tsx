@@ -3,6 +3,9 @@ import { storage } from "../lib/storage";
 import { MOCK_SOLICITUDES } from "../../data/mockSolicitudes";
 import { MOCK_DENUNCIAS } from "../../data/mockDenuncias";
 import { MOCK_FUNDACIONES } from "../../data/mockFundaciones";
+import type { User } from "../lib/types";
+import { MOCK_USERS } from "../../data/mockUsers";
+
 
 type Denuncia = typeof MOCK_DENUNCIAS[0];
 type Fundacion = typeof MOCK_FUNDACIONES[0];
@@ -11,6 +14,12 @@ interface AdminContextType {
   solicitudes: typeof MOCK_SOLICITUDES;
   denuncias: Denuncia[];
   fundaciones: Fundacion[];
+  usuarios: User[];
+  toggleUserStatus: (id: string) => void;
+  setUserEstatus: (id: string, nuevoEstatus: User["estatus"]) => void;
+  revokeUserSession: (id: string) => void;
+  toggleUserSession: (id: string) => void;
+  updateUsuario: (id: string, updates: Partial<User>) => void;
   addSolicitud: (sol: typeof MOCK_SOLICITUDES[0]) => void;
   updateSolicitud: (id: string, updates: Partial<typeof MOCK_SOLICITUDES[0]>) => void;
   addDenuncia: (data: Omit<Denuncia, "id" | "ticket" | "estado" | "fecha" | "auditoria" | "createdAt" | "updatedAt">) => Denuncia;
@@ -21,6 +30,82 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType | null>(null);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
+  const [usuarios, setUsuarios] = useState<User[]>(() => {
+    const stored = storage.getUserList();
+    return stored.length > 0 ? stored : MOCK_USERS;
+  });
+
+  const toggleUserStatus = useCallback((id: string) => {
+    setUsuarios((prev) => {
+      const updated = prev.map((u) => {
+        if (u.id === id) {
+          const actualmenteActivo = u.estatus === "ACTIVO";
+          const nuevoEstatus: User["estatus"] = actualmenteActivo ? "BLOQUEADO" : "ACTIVO";
+          return {
+            ...u,
+            estatus: nuevoEstatus,
+            estaActivo: !actualmenteActivo,
+            sesionActiva: !actualmenteActivo ? u.sesionActiva : false,
+          };
+        }
+        return u;
+      });
+      storage.setUserList(updated);
+      return updated;
+    });
+  }, []);
+
+  const setUserEstatus = useCallback((id: string, nuevoEstatus: User["estatus"]) => {
+    setUsuarios((prev) => {
+      const updated = prev.map((u) => {
+        if (u.id === id) {
+          const isActivo = nuevoEstatus === "ACTIVO";
+          return {
+            ...u,
+            estatus: nuevoEstatus,
+            estaActivo: isActivo,
+            sesionActiva: isActivo ? u.sesionActiva : false,
+          };
+        }
+        return u;
+      });
+      storage.setUserList(updated);
+      return updated;
+    });
+  }, []);
+
+  const revokeUserSession = useCallback((id: string) => {
+    setUsuarios((prev) => {
+      const updated = prev.map((u) =>
+        u.id === id ? { ...u, sesionActiva: false } : u
+      );
+      storage.setUserList(updated);
+      return updated;
+    });
+  }, []);
+
+  const toggleUserSession = useCallback((id: string) => {
+    setUsuarios((prev) => {
+      const updated = prev.map((u) => {
+        if (u.id === id) {
+          const nuevaSesion = !u.sesionActiva;
+          return { ...u, sesionActiva: nuevaSesion };
+        }
+        return u;
+      });
+      storage.setUserList(updated);
+      return updated;
+    });
+  }, []);
+
+  const updateUsuario = useCallback((id: string, updates: Partial<User>) => {
+    setUsuarios((prev) => {
+      const updated = prev.map((u) => (u.id === id ? { ...u, ...updates } : u));
+      storage.setUserList(updated);
+      return updated;
+    });
+  }, []);
+
   const [solicitudes, setSolicitudes] = useState(() => {
     const stored = storage.getSolicitudes();
     return stored.length > 0 ? stored : MOCK_SOLICITUDES;
@@ -97,7 +182,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AdminContext.Provider value={{ solicitudes, denuncias, fundaciones, addSolicitud, updateSolicitud, addDenuncia, updateDenuncia, updateFundacion }}>
+    <AdminContext.Provider value={{ solicitudes, denuncias, fundaciones, usuarios, toggleUserStatus, setUserEstatus, revokeUserSession, toggleUserSession, updateUsuario, addSolicitud, updateSolicitud, addDenuncia, updateDenuncia, updateFundacion }}>
       {children}
     </AdminContext.Provider>
   );

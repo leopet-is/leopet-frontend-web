@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { PawPrint, FileCheck, AlertTriangle, TrendingUp, ArrowRight, Gavel, DollarSign } from 'lucide-react';
+import { PawPrint, FileCheck, AlertTriangle, TrendingUp, ArrowRight, Gavel, DollarSign, Users } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 import { usePagos } from '../context/PagoContext';
 import { AdminLayout } from './AdminLayout';
 
 export function AdminDashboard() {
-  const { solicitudes, denuncias } = useAdmin();
+  const { solicitudes, denuncias, usuarios } = useAdmin();
   const { pagos } = usePagos();
 
   const pendientes = solicitudes.filter((s) => s.estado === "Pendiente").length;
@@ -76,6 +76,14 @@ export function AdminDashboard() {
                 <div className="flex-1">
                   <p className="text-[#004955] font-medium text-sm">Aprobar Desembolsos</p>
                   <p className="text-gray-500 text-xs">Liquidaciones generadas por calificaciones de evidencias</p>
+                </div>
+                <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
+              </Link>
+              <Link to="/admin/usuarios" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                <div className="bg-[#004955]/10 p-2 rounded-lg"><Users size={18} className="text-[#004955]" /></div>
+                <div className="flex-1">
+                  <p className="text-[#004955] font-medium text-sm">Control de Usuarios</p>
+                  <p className="text-gray-500 text-xs">{usuarios.length} cuentas registradas · {usuarios.filter(u => u.sesionActiva).length} en línea</p>
                 </div>
                 <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
               </Link>

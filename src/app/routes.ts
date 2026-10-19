@@ -20,6 +20,7 @@ import { FoundationEvidencias } from "./pages/FoundationEvidencias";
 import { FoundationPadrinos } from "./pages/FoundationPadrinos";
 import { FoundationAdvertencias } from "./pages/FoundationAdvertencias";
 import { FoundationPagos } from "./pages/FoundationPagos";
+import { AdminUsuarios } from "./pages/AdminUsuarios";
 
 export const router = createBrowserRouter([
   {
@@ -81,6 +82,10 @@ export const router = createBrowserRouter([
       {
         path: "admin/apelaciones",
         Component: AdminApelaciones,
+      },
+      {
+        path: "admin/usuarios",
+        Component: AdminUsuarios,
       },
       {
         path: "fundacion",
