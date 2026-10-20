@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { storage } from "../lib/storage";
 import { MOCK_SOLICITUDES } from "../../data/mockSolicitudes";
 import { MOCK_DENUNCIAS } from "../../data/mockDenuncias";
 import { MOCK_FUNDACIONES } from "../../data/mockFundaciones";
 import type { User } from "../lib/types";
-import { MOCK_USERS } from "../../data/mockUsers";
+import { getUsuariosApi, updateUsuarioEstadoApi } from "../api/usuarios.api";
 
 
 type Denuncia = typeof MOCK_DENUNCIAS[0];
@@ -15,8 +15,11 @@ interface AdminContextType {
   denuncias: Denuncia[];
   fundaciones: Fundacion[];
   usuarios: User[];
-  toggleUserStatus: (id: string) => void;
-  setUserEstatus: (id: string, nuevoEstatus: User["estatus"]) => void;
+  isLoadingUsuarios: boolean;
+  errorUsuarios: string | null;
+  fetchUsuarios: () => Promise<void>;
+  toggleUserStatus: (id: string) => Promise<void>;
+  setUserEstatus: (id: string, nuevoEstatus: User["estatus"]) => Promise<void>;
   revokeUserSession: (id: string) => void;
   toggleUserSession: (id: string) => void;
   updateUsuario: (id: string, updates: Partial<User>) => void;
@@ -30,17 +33,43 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType | null>(null);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [usuarios, setUsuarios] = useState<User[]>(() => {
-    const stored = storage.getUserList();
-    return stored.length > 0 ? stored : MOCK_USERS;
-  });
+  const [usuarios, setUsuarios] = useState<User[]>(() => storage.getUserList());
+  const [isLoadingUsuarios, setIsLoadingUsuarios] = useState<boolean>(true);
+  const [errorUsuarios, setErrorUsuarios] = useState<string | null>(null);
 
-  const toggleUserStatus = useCallback((id: string) => {
+  const fetchUsuarios = useCallback(async () => {
+    try {
+      setIsLoadingUsuarios(true);
+      setErrorUsuarios(null);
+      const data = await getUsuariosApi();
+      setUsuarios(data);
+      storage.setUserList(data);
+    } catch (err: any) {
+      console.error("Error cargando usuarios:", err);
+      setErrorUsuarios(err.message || "Error al conectar con el servidor");
+      const stored = storage.getUserList();
+      if (stored.length > 0) setUsuarios(stored);
+    } finally {
+      setIsLoadingUsuarios(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, [fetchUsuarios]);
+
+  const toggleUserStatus = useCallback(async (id: string) => {
+    const user = usuarios.find((u) => u.id === id);
+    if (!user) return;
+
+    const actualmenteActivo = user.estatus === "ACTIVO";
+    const nuevoEstatus: User["estatus"] = actualmenteActivo ? "BLOQUEADO" : "ACTIVO";
+
+    await updateUsuarioEstadoApi(id, nuevoEstatus);
+
     setUsuarios((prev) => {
       const updated = prev.map((u) => {
         if (u.id === id) {
-          const actualmenteActivo = u.estatus === "ACTIVO";
-          const nuevoEstatus: User["estatus"] = actualmenteActivo ? "BLOQUEADO" : "ACTIVO";
           return {
             ...u,
             estatus: nuevoEstatus,
@@ -53,9 +82,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       storage.setUserList(updated);
       return updated;
     });
-  }, []);
+  }, [usuarios]);
 
-  const setUserEstatus = useCallback((id: string, nuevoEstatus: User["estatus"]) => {
+  const setUserEstatus = useCallback(async (id: string, nuevoEstatus: User["estatus"]) => {
+    await updateUsuarioEstadoApi(id, nuevoEstatus);
+
     setUsuarios((prev) => {
       const updated = prev.map((u) => {
         if (u.id === id) {
@@ -182,7 +213,27 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AdminContext.Provider value={{ solicitudes, denuncias, fundaciones, usuarios, toggleUserStatus, setUserEstatus, revokeUserSession, toggleUserSession, updateUsuario, addSolicitud, updateSolicitud, addDenuncia, updateDenuncia, updateFundacion }}>
+    <AdminContext.Provider
+      value={{
+        solicitudes,
+        denuncias,
+        fundaciones,
+        usuarios,
+        isLoadingUsuarios,
+        errorUsuarios,
+        fetchUsuarios,
+        toggleUserStatus,
+        setUserEstatus,
+        revokeUserSession,
+        toggleUserSession,
+        updateUsuario,
+        addSolicitud,
+        updateSolicitud,
+        addDenuncia,
+        updateDenuncia,
+        updateFundacion,
+      }}
+    >
       {children}
     </AdminContext.Provider>
   );
