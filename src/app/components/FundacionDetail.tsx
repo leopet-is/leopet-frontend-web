@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { ArrowLeft, MapPin, PawPrint, CheckCircle2, Heart, ShieldBan } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MOCK_MASCOTAS } from '../../data/mockMascotas';
-import { useAdmin } from '../context/AdminContext';
+import { getFundacionByIdApi, type FundacionFrontend } from '../api/fundaciones.api';
+import { getMascotasByFundacionApi, type MascotaFrontend } from '../api/mascotas.api';
 import { useManada } from '../context/ManadaContext';
 import { useFavoritos } from '../context/FavoritosContext';
 
 const statusLabel: Record<string, string> = {
-  NO_APADRINADO: "Disponible",
+  REQUIERE_PADRINOS: "Disponible",
   APADRINADO: "Apadrinado",
+  EN_TRATAMIENTO: "En Tratamiento",
+  FALLECIDO: "Fallecido",
+  INACTIVO: "Inactivo",
+  NO_APADRINADO: "Disponible",
   EN_PROCESO: "En Proceso",
   ADOPTADO: "Adoptado",
 };
@@ -18,14 +22,73 @@ export function FundacionDetail() {
   const { id } = useParams<{ id: string }>();
   const { addToManada, mascotas: manadaMascotas } = useManada();
   const { isFavorito, toggleFavorito } = useFavoritos();
-  const { fundaciones } = useAdmin();
 
-  const fundacion = fundaciones.find((f) => f.id === id) || fundaciones[0];
-  const deshabilitada = fundacion?.estado === "Deshabilitada";
-  const mascotas = MOCK_MASCOTAS.filter((m) => m.fundacionId === fundacion.id);
+  const [fundacion, setFundacion] = useState<FundacionFrontend | null>(null);
+  const [mascotas, setMascotas] = useState<MascotaFrontend[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+
+    Promise.all([
+      getFundacionByIdApi(id),
+      getMascotasByFundacionApi(id),
+    ])
+      .then(([fundacionData, mascotasData]) => {
+        if (!isMounted) return;
+        setFundacion(fundacionData);
+        setMascotas(mascotasData);
+      })
+      .catch((err: any) => {
+        if (!isMounted) return;
+        console.error("Error al cargar perfil de fundación:", err);
+        setError(err.message || "No se pudo cargar la información de la fundación.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-8">
+        <div className="w-12 h-12 border-4 border-[#07c4e1] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-[#004955] font-semibold text-base">Cargando perfil de la fundación...</p>
+      </div>
+    );
+  }
+
+  if (error || !fundacion) {
+    return (
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-8 text-center">
+        <ShieldBan size={56} className="text-[#ee5871] mb-4" />
+        <h1 className="text-2xl font-bold text-[#004955] mb-2">Fundación no encontrada</h1>
+        <p className="text-gray-600 max-w-md mb-6 text-sm">
+          {error || "La fundación solicitada no existe o no se encuentra disponible actualmente."}
+        </p>
+        <Link
+          to="/fundaciones"
+          className="inline-flex items-center gap-2 bg-[#00626d] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-[#004955] transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Volver a Fundaciones
+        </Link>
+      </div>
+    );
+  }
+
+  const deshabilitada = fundacion.estado === "Deshabilitada";
   const favorita = isFavorito(fundacion.id);
 
-  const handleApadrinar = (mascota: typeof MOCK_MASCOTAS[0]) => {
+  const handleApadrinar = (mascota: MascotaFrontend) => {
     if (manadaMascotas.some((a) => a.animalId === String(mascota.id))) return;
     addToManada({
       id: `manada-animal-${mascota.id}`,
@@ -34,7 +97,7 @@ export function FundacionDetail() {
       montoMensual: 25.00,
       nombre: mascota.nombre,
       refugioNombre: fundacion.nombre,
-      etiqueta: mascota.status === "NO_APADRINADO" ? "SALUDABLE" : "ATENCIÓN",
+      etiqueta: mascota.status === "REQUIERE_PADRINOS" || mascota.status === "NO_APADRINADO" ? "SALUDABLE" : "ATENCIÓN",
       imagenUrl: mascota.imagen,
     });
   };
@@ -74,7 +137,7 @@ export function FundacionDetail() {
                 </div>
                 <div className="flex items-center gap-1 text-white/80 text-sm">
                   <PawPrint size={14} />
-                  {fundacion.cantidadMascotasCuidado} mascotas
+                  {mascotas.length} {mascotas.length === 1 ? "mascota" : "mascotas"}
                 </div>
               </div>
             </div>
@@ -114,7 +177,7 @@ export function FundacionDetail() {
             <div className="sticky top-24 space-y-6">
               <div>
                 <h2 className="text-[#004955] text-xl font-bold mb-3">Sobre nosotros</h2>
-                <p className="text-[#3e494a] text-sm leading-relaxed">
+                <p className="text-[#3e494a] text-sm leading-relaxed whitespace-pre-line">
                   {fundacion.descripcionCorta}
                 </p>
               </div>
@@ -135,9 +198,15 @@ export function FundacionDetail() {
                     <MapPin size={14} className="text-[#07c4e1]" />
                     <span>{fundacion.ubicacion}</span>
                   </div>
+                  {fundacion.telefono && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#07c4e1] text-xs font-bold">TEL:</span>
+                      <span>{fundacion.telefono}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <PawPrint size={14} className="text-[#07c4e1]" />
-                    <span>{fundacion.cantidadMascotasCuidado} mascotas bajo cuidado</span>
+                    <span>{mascotas.length} mascotas bajo cuidado</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={14} className="text-[#07c4e1]" />
@@ -226,3 +295,4 @@ export function FundacionDetail() {
     </div>
   );
 }
+

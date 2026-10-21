@@ -17,6 +17,10 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('leopet_token');
+    }
+
     const contentType = response.headers.get("content-type");
     let errorMessage = `Error del servidor: ${response.status}`;
 

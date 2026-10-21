@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router';
 import { motion } from "motion/react";
-import { MapPin, PawPrint, Building2, Heart } from 'lucide-react';
+import { MapPin, PawPrint, Building2, Heart, ShieldBan } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useFavoritos } from '../context/FavoritosContext';
-import { useAdmin } from '../context/AdminContext';
-import { ShieldBan } from 'lucide-react';
+import { getFundacionesApi, type FundacionFrontend } from '../api/fundaciones.api';
 
 export function FundacionesList() {
   const { isFavorito, toggleFavorito } = useFavoritos();
-  const { fundaciones } = useAdmin();
+  const [fundaciones, setFundaciones] = useState<FundacionFrontend[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<"todas" | "favoritas">("todas");
+
+  const loadFundaciones = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await getFundacionesApi(100, 1);
+      setFundaciones(data);
+    } catch (err: any) {
+      console.error("Error al cargar fundaciones:", err);
+      setError(err.message || "Error al conectar con el servidor.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFundaciones();
+  }, [loadFundaciones]);
 
   const fundacionesFiltradas = filtro === "favoritas"
     ? fundaciones.filter((f) => isFavorito(f.id))
@@ -55,11 +74,32 @@ export function FundacionesList() {
           </button>
         </div>
 
-        {fundacionesFiltradas.length === 0 && filtro === "favoritas" ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-[#07c4e1] border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-[#004955] font-semibold text-base">Cargando fundaciones...</p>
+          </div>
+        ) : error && fundaciones.length === 0 ? (
+          <div className="text-center py-16 bg-red-50 rounded-2xl border border-red-200 p-8">
+            <p className="text-[#ee5871] font-semibold mb-2">No se pudieron cargar las fundaciones</p>
+            <p className="text-gray-500 text-sm mb-4">{error}</p>
+            <button
+              onClick={loadFundaciones}
+              className="bg-[#00626d] text-white px-5 py-2 rounded-full text-xs font-semibold hover:bg-[#004955] transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : fundacionesFiltradas.length === 0 && filtro === "favoritas" ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-[#BDC8CA]/40">
             <Heart size={48} className="mx-auto text-gray-300 mb-3" />
             <p className="text-gray-600 font-medium">Aún no tienes fundaciones favoritas</p>
             <p className="text-gray-400 text-sm mt-1">Marca una fundación con el corazón para guardarla aquí.</p>
+          </div>
+        ) : fundacionesFiltradas.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+            <Building2 size={48} className="mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-600 font-medium">No se encontraron fundaciones registradas.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
