@@ -27,4 +27,3 @@
 ---
 ## Documentación de Rutas
 https://leopet-backend.onrender.com/api-docs#description/introduction
-

@@ -340,9 +340,6 @@ export function AdminDenuncias() {
 
         <div>
           <h2 className="text-[#004955] text-2xl font-semibold">Denuncias y Reportes</h2>
-          <p className="text-[#3e494a] text-sm mt-1">
-            Audita las denuncias de donadores sobre evidencias y fundaciones, y resuelve según el escenario.
-          </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -432,7 +429,6 @@ export function AdminDenuncias() {
                 )}
               </div>
               <h2 className="text-[#004955] text-xl font-bold mb-1">Mediación Técnica: Evidencia vs. Denuncia</h2>
-              <p className="text-gray-500 text-sm mb-6">Compara la evidencia original con el sustento del donador (HU8/HU9).</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                 <div className="border border-[#BDC8CA]/40 rounded-2xl overflow-hidden">
@@ -536,7 +532,7 @@ export function AdminDenuncias() {
                 <div className="mb-6">
                   <h3 className="text-[#004955] font-semibold text-sm mb-2 flex items-center gap-2">
                     <History size={16} />
-                    Auditoría de acciones (HU6)
+                    Auditoría de acciones
                   </h3>
                   <div className="space-y-2">
                     {selectedDen.auditoria.map((a, i) => (

@@ -19,7 +19,7 @@ const ESTADO_STYLE: Record<string, string> = {
   desembolsada: "bg-[#004955]/10 text-[#004955] border-[#004955]/20",
 };
 
-function Stars({ value }: { value: number; size?: number }) {
+function Stars({ value, size }: { value: number; size?: number }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((s) => (
@@ -104,9 +104,6 @@ export function AdminApelaciones() {
 
         <div>
           <h2 className="text-[#004955] text-2xl font-semibold">Liquidaciones y Apelaciones</h2>
-          <p className="text-[#3e494a] text-sm mt-1">
-            Mediación técnica HU11: revisa la evidencia vs. el comentario del donador, ajusta la calificación y el sistema recalcula el monto automáticamente.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
