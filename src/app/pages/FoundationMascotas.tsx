@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, PawPrint, X, Check, Camera, ChevronDown, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit2, PawPrint, X, Camera, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { useFoundation } from '../context/FoundationContext';
 import { useAuth } from '../context/AuthContext';
 import { FoundationLayout } from './FoundationLayout';
@@ -135,7 +135,7 @@ export function FoundationMascotas() {
         fechaRegistro: now.split("T")[0],
         ubicacion: "Guayaquil",
       };
-      addMascota(newMascota as any);
+      addMascota(newMascota);
       showToast("Mascota registrada con éxito");
     }
     setShowModal(false);

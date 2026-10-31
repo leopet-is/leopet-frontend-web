@@ -58,7 +58,7 @@ export interface ApiFundacion {
   cantidadMascotasCuidado?: number;
   createdAt?: string;
   updatedAt?: string;
-  cuentaBancaria?: any;
+  cuentaBancaria?: unknown;
   user?: {
     id?: number;
     email?: string;

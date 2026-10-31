@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import { useAdmin } from '../context/AdminContext';
 import { esCedulaValida, esTelefonoEcuador, esRucValido } from '../lib/validators';
 import isEmail from "validator/lib/isEmail";
 import { crearSolicitud } from '../api/fundaciones.api';
@@ -24,7 +23,6 @@ interface FormErrors {
 }
 
 export function RegistrationForm() {
-  const { addSolicitud } = useAdmin();
   const [formData, setFormData] = useState<FormData>({
     foundationName: "",
     ruc: "",
@@ -95,14 +93,14 @@ export function RegistrationForm() {
         comentarios: formData.additionalInfo,
       };
 
-      const respuesta = await crearSolicitud(payload); 
+      await crearSolicitud(payload);
       setIsSuccess(true);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error en submit:", error);
       setErrors((prev) => ({ 
         ...prev, 
-        form: error.message || "Ocurrió un error al conectar con el servidor. Intenta de nuevo." 
+        form: (error as Error).message || "Ocurrió un error al conectar con el servidor. Intenta de nuevo." 
       }));
     } finally {
       setIsSubmitting(false);

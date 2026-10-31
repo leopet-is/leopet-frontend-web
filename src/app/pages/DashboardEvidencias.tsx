@@ -22,7 +22,7 @@ const DENUNCIA_MOTIVOS = [
 ];
 
 export function DashboardEvidencias() {
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const { mascotas } = useManada();
   const { subscriptions } = useSubscriptions();
   const { favoritos } = useFavoritos();

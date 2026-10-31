@@ -33,7 +33,7 @@ export interface ManadaAnimal {
   nombre?: string;
   refugioNombre?: string;
   etiqueta?: string;
-  imagenUrl?: any;
+  imagenUrl?: string;
 }
 
 export interface Manada {
@@ -70,7 +70,7 @@ export interface Subscription {
   userId: string;
   manadaId: string;
   nombre?: string;
-  pets: { petId: string; name: string; monthlyAmount: number; image: any }[];
+  pets: { petId: string; name: string; monthlyAmount: number; image: string }[];
   totalMonthly: number;
   montoMensual?: number;
   comision?: number;
@@ -88,7 +88,7 @@ export interface Evidence {
   type: "photo" | "video";
   title: string;
   description: string;
-  imageUrl: any;
+  imageUrl: string;
   date: string;
   rating?: number;
   comment?: string;

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from "motion/react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import imgMadeline from "../../imports/Landing/4dc920e99c2e98f921d04e2a964f2a21a4c21dc0.png";
 

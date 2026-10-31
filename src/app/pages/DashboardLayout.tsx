@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router';
-import { PawPrint, BarChart3, LayoutGrid, CreditCard, AlertTriangle } from 'lucide-react';
+import { PawPrint, BarChart3, LayoutGrid, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSubscriptions } from '../context/SubscriptionContext';
 

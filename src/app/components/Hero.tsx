@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from "motion/react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import imgAndrewPons from "../../imports/Landing/a400d79d4372f336b630662c5699951094ef93e1.png";
-import imgLogo from "../../imports/Landing/76faf8f617b56e6f079c5a7ead8f927f5a5fee32.png"; // Assuming standard naming if I had full path, but using the vectorized one from index.tsx
 
 // Since the logo is vectorized in index.tsx, I'll use a placeholder or the import if I can find it.
 // Actually, index.tsx uses Group() for the logo. I'll stick to a placeholder or simplified SVG for now if not found.

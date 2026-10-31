@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { FoundationLayout } from './FoundationLayout';
 
 export function FoundationPadrinos() {
-  const { padrinos, mascotas } = useFoundation();
+  const { padrinos } = useFoundation();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
 

@@ -1,4 +1,33 @@
-import type { User } from "./types";
+import type { User, ManadaAnimal, Subscription } from "./types";
+
+type StoredPago = (typeof import("../../data/mockPagos").MOCK_PAGOS)[number];
+type StoredSolicitud = (typeof import("../../data/mockSolicitudes").MOCK_SOLICITUDES)[number];
+type StoredDenuncia = (typeof import("../../data/mockDenuncias").MOCK_DENUNCIAS)[number];
+type StoredFundacion = (typeof import("../../data/mockFundaciones").MOCK_FUNDACIONES)[number];
+type StoredMascota = (typeof import("../../data/mockMascotas").MOCK_MASCOTAS)[number];
+type StoredEvidencia = (typeof import("../../data/mockEvidencias").MOCK_EVIDENCIAS)[number];
+type StoredAdvertencia = (typeof import("../../data/mockAdvertencias").MOCK_ADVERTENCIAS)[number];
+type StoredNotificacion = (typeof import("../../data/mockNotificaciones").MOCK_NOTIFICACIONES)[number];
+
+export interface StoredAuthUser {
+  id: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  cedula: string;
+  rol: "donador" | "fundacion" | "admin";
+  estaActivo: boolean;
+  fundacionId?: number | null;
+}
+
+function getArray<T>(key: string): T[] {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) as T[] : [];
+  } catch {
+    return [];
+  }
+}
 
 const KEYS = {
   MANADA_CART: "leopet_manada_cart",
@@ -20,16 +49,9 @@ const KEYS = {
 } as const;
 
 export const storage = {
-  getManadaCart: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.MANADA_CART);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getManadaCart: (): ManadaAnimal[] => getArray<ManadaAnimal>(KEYS.MANADA_CART),
 
-  setManadaCart: (cart: any[]) => {
+  setManadaCart: (cart: ManadaAnimal[]) => {
     localStorage.setItem(KEYS.MANADA_CART, JSON.stringify(cart));
   },
 
@@ -51,29 +73,22 @@ export const storage = {
     localStorage.setItem(KEYS.MANADA_MONTO, String(monto));
   },
 
-  getPagos: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.PAGOS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getPagos: (): StoredPago[] => getArray<StoredPago>(KEYS.PAGOS),
 
-  setPagos: (pagos: any[]) => {
+  setPagos: (pagos: StoredPago[]) => {
     localStorage.setItem(KEYS.PAGOS, JSON.stringify(pagos));
   },
 
-  getUser: (): any | null => {
+  getUser: (): StoredAuthUser | null => {
     try {
       const data = localStorage.getItem(KEYS.USER);
-      return data ? JSON.parse(data) : null;
+      return data ? JSON.parse(data) as StoredAuthUser : null;
     } catch {
       return null;
     }
   },
 
-  setUser: (user: any | null) => {
+  setUser: (user: StoredAuthUser | null) => {
     if (user) {
       localStorage.setItem(KEYS.USER, JSON.stringify(user));
     } else {
@@ -110,16 +125,9 @@ export const storage = {
     }
   },
 
-  getSubscriptions: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.SUBSCRIPTIONS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getSubscriptions: (): Subscription[] => getArray<Subscription>(KEYS.SUBSCRIPTIONS),
 
-  setSubscriptions: (subs: any[]) => {
+  setSubscriptions: (subs: Subscription[]) => {
     localStorage.setItem(KEYS.SUBSCRIPTIONS, JSON.stringify(subs));
   },
 
@@ -136,94 +144,45 @@ export const storage = {
     localStorage.setItem(KEYS.FAVORITOS, JSON.stringify(ids));
   },
 
-  getSolicitudes: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.ADMIN_SOLICITUDES);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getSolicitudes: (): StoredSolicitud[] => getArray<StoredSolicitud>(KEYS.ADMIN_SOLICITUDES),
 
-  setSolicitudes: (solicitudes: any[]) => {
+  setSolicitudes: (solicitudes: StoredSolicitud[]) => {
     localStorage.setItem(KEYS.ADMIN_SOLICITUDES, JSON.stringify(solicitudes));
   },
 
-  getDenuncias: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.ADMIN_DENUNCIAS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getDenuncias: (): StoredDenuncia[] => getArray<StoredDenuncia>(KEYS.ADMIN_DENUNCIAS),
 
-  setDenuncias: (denuncias: any[]) => {
+  setDenuncias: (denuncias: StoredDenuncia[]) => {
     localStorage.setItem(KEYS.ADMIN_DENUNCIAS, JSON.stringify(denuncias));
   },
 
-  getFundaciones: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.ADMIN_FUNDACIONES);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getFundaciones: (): StoredFundacion[] => getArray<StoredFundacion>(KEYS.ADMIN_FUNDACIONES),
 
-  setFundaciones: (fundaciones: any[]) => {
+  setFundaciones: (fundaciones: StoredFundacion[]) => {
     localStorage.setItem(KEYS.ADMIN_FUNDACIONES, JSON.stringify(fundaciones));
   },
 
-  getFoundationMascotas: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.FOUNDATION_MASCOTAS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getFoundationMascotas: (): StoredMascota[] => getArray<StoredMascota>(KEYS.FOUNDATION_MASCOTAS),
 
-  setFoundationMascotas: (mascotas: any[]) => {
+  setFoundationMascotas: (mascotas: StoredMascota[]) => {
     localStorage.setItem(KEYS.FOUNDATION_MASCOTAS, JSON.stringify(mascotas));
   },
 
-  getFoundationEvidencias: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.FOUNDATION_EVIDENCIAS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getFoundationEvidencias: (): StoredEvidencia[] => getArray<StoredEvidencia>(KEYS.FOUNDATION_EVIDENCIAS),
 
-  setFoundationEvidencias: (evidencias: any[]) => {
+  setFoundationEvidencias: (evidencias: StoredEvidencia[]) => {
     localStorage.setItem(KEYS.FOUNDATION_EVIDENCIAS, JSON.stringify(evidencias));
   },
 
-  getFoundationAdvertencias: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.FOUNDATION_ADVERTENCIAS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getFoundationAdvertencias: (): StoredAdvertencia[] => getArray<StoredAdvertencia>(KEYS.FOUNDATION_ADVERTENCIAS),
 
-  setFoundationAdvertencias: (advertencias: any[]) => {
+  setFoundationAdvertencias: (advertencias: StoredAdvertencia[]) => {
     localStorage.setItem(KEYS.FOUNDATION_ADVERTENCIAS, JSON.stringify(advertencias));
   },
 
-  getNotificaciones: (): any[] => {
-    try {
-      const data = localStorage.getItem(KEYS.NOTIFICACIONES);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+  getNotificaciones: (): StoredNotificacion[] => getArray<StoredNotificacion>(KEYS.NOTIFICACIONES),
 
-  setNotificaciones: (notificaciones: any[]) => {
+  setNotificaciones: (notificaciones: StoredNotificacion[]) => {
     localStorage.setItem(KEYS.NOTIFICACIONES, JSON.stringify(notificaciones));
   },
 };

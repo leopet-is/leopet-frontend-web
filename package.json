@@ -6,8 +6,8 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint": "eslint src/app src/data src/types src/main.tsx",
+    "lint:fix": "eslint src/app src/data src/types src/main.tsx --fix"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

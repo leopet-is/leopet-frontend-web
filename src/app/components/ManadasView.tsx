@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Plus, CreditCard, ChevronRight, Info, ShieldCheck, Heart, Trash2 } from 'lucide-react';
+import { Plus, CreditCard, ChevronRight } from 'lucide-react';
 import imgAlimentacion from "../../imports/Manadas/9ec279e8e0b77d8a1cef5b76d12950fe70e8b841.png";
 import { ImageWithFallback } from './figma/ImageWithFallback';
 

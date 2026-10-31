@@ -506,7 +506,7 @@ export function AdminDenuncias() {
                       <div>
                         <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1">Adjuntos</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedDen.pruebasUrls.map((p) => (
+                          {selectedDen.pruebasUrls.map((p: string) => (
                             <span key={p} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs">
                               <Paperclip size={12} />
                               {p}
@@ -535,7 +535,7 @@ export function AdminDenuncias() {
                     Auditoría de acciones
                   </h3>
                   <div className="space-y-2">
-                    {selectedDen.auditoria.map((a, i) => (
+                    {selectedDen.auditoria.map((a: { accion: string; fecha: string; detalle?: string }, i: number) => (
                       <div key={i} className="flex items-start gap-3 text-sm">
                         <span className="w-2 h-2 rounded-full bg-[#07c4e1] mt-1.5 flex-shrink-0" />
                         <div className="flex-1">
@@ -635,7 +635,7 @@ export function AdminDenuncias() {
               <p className="text-gray-500 text-sm mb-5">
                 Se confirma falta gravísima (Maltrato o Fraude recurrente). La cuenta de{" "}
                 <strong>{selectedDen.fundacionNombre}</strong> será deshabilitada y la denuncia marcada como{" "}
-                <strong>"Válida — Sanción Máxima"</strong>.
+                <strong>&quot;Válida — Sanción Máxima&quot;</strong>.
               </p>
               <textarea
                 value={resolucionText}
@@ -743,7 +743,7 @@ export function AdminDenuncias() {
               </div>
               <h3 className="text-[#004955] text-lg font-bold mb-1">Iniciar investigación</h3>
               <p className="text-gray-500 text-sm mb-6">
-                La denuncia pasará a estado <strong>"En investigación"</strong> y se evaluará gravedad y veracidad
+                La denuncia pasará a estado <strong>&quot;En investigación&quot;</strong> y se evaluará gravedad y veracidad
                 de las pruebas contra la evidencia original.
               </p>
               <div className="flex gap-3">

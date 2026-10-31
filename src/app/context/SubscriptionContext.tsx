@@ -23,11 +23,6 @@ const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => storage.getSubscriptions());
 
-  const persist = (updated: Subscription[]) => {
-    setSubscriptions(updated);
-    storage.setSubscriptions(updated);
-  };
-
   const addSubscription = useCallback((sub: Subscription) => {
     setSubscriptions((prev) => {
       const updated = [...prev, sub];

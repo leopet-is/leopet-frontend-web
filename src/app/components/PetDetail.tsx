@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { motion } from "motion/react";
-import { MapPin, Info, Heart, ShieldAlert, Star, CheckCircle, CheckCircle2, Syringe, Pill, Stethoscope } from 'lucide-react';
+import { MapPin, Info, Heart, CheckCircle, CheckCircle2, Syringe, Pill, Stethoscope } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
 import { MOCK_PETS } from '../lib/mockData';

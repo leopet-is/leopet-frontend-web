@@ -10,25 +10,26 @@ import {
   AlertTriangle,
   X,
   Wifi,
-  WifiOff,
   Power,
   ShieldAlert,
   Clock,
   UserCheck,
   UserX,
-  Circle,
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 import { AdminLayout } from './AdminLayout';
 import type { User } from '../lib/types';
 
+type RoleFilter = 'todos' | User['rol'];
+type StatusFilter = 'todos' | User['estatus'] | 'en_linea';
+
 export function AdminUsuarios() {
-  const { usuarios, toggleUserStatus, setUserEstatus, revokeUserSession, toggleUserSession } = useAdmin();
+  const { usuarios, toggleUserStatus, setUserEstatus, toggleUserSession } = useAdmin();
 
   // Estados de Filtros y Búsqueda
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'todos' | 'donador' | 'fundacion' | 'admin'>('todos');
-  const [statusFilter, setStatusFilter] = useState<'todos' | User['estatus'] | 'en_linea'>('todos');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('todos');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos');
 
   // Estados para Modales y Feedback
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -45,6 +46,11 @@ export function AdminUsuarios() {
   const totalActivos = usuarios.filter((u) => u.estatus === 'ACTIVO').length;
   const totalBloqueados = usuarios.filter((u) => u.estatus === 'BLOQUEADO').length;
   const totalEnLinea = usuarios.filter((u) => u.sesionActiva).length;
+  const roleFilters: { id: RoleFilter; label: string }[] = [
+    { id: 'todos', label: 'Todos los Roles' },
+    { id: 'donador', label: `Donadores (${usuarios.filter((u) => u.rol === 'donador').length})` },
+    { id: 'fundacion', label: `Fundaciones (${usuarios.filter((u) => u.rol === 'fundacion').length})` },
+  ];
 
   // Filtrado reactivo en tiempo real
   const filteredUsers = useMemo(() => {
@@ -224,14 +230,10 @@ export function AdminUsuarios() {
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             {/* Filtros de Rol */}
             <div className="flex gap-2 flex-wrap">
-              {[
-                { id: 'todos', label: 'Todos los Roles' },
-                { id: 'donador', label: `Donadores (${usuarios.filter((u) => u.rol === 'donador').length})` },
-                { id: 'fundacion', label: `Fundaciones (${usuarios.filter((u) => u.rol === 'fundacion').length})` },
-              ].map((rf) => (
+              {roleFilters.map((rf) => (
                 <button
                   key={rf.id}
-                  onClick={() => setRoleFilter(rf.id as any)}
+                  onClick={() => setRoleFilter(rf.id)}
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     roleFilter === rf.id
                       ? 'bg-[#004955] text-white shadow-sm'
@@ -259,17 +261,17 @@ export function AdminUsuarios() {
           {/* Filtros de Estado en la Base de Datos */}
           <div className="flex gap-2 items-center text-xs flex-wrap">
             <span className="text-gray-500 font-medium">Estado:</span>
-            {[
+            {([
               { id: 'todos', label: 'Todos' },
               { id: 'ACTIVO', label: 'Activo' },
               { id: 'BLOQUEADO', label: 'Bloqueado' },
               { id: 'INACTIVO', label: 'Inactivo' },
               { id: 'PENDIENTE_ACTIVACION', label: 'Pendiente' },
               { id: 'en_linea', label: 'En línea' },
-            ].map((sf) => (
+            ] satisfies { id: StatusFilter; label: string }[]).map((sf) => (
               <button
                 key={sf.id}
-                onClick={() => setStatusFilter(sf.id as any)}
+                onClick={() => setStatusFilter(sf.id)}
                 className={`px-3 py-1 rounded-lg transition-colors ${
                   statusFilter === sf.id
                     ? 'bg-[#07c4e1]/20 text-[#004955] font-semibold'

@@ -44,9 +44,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       const data = await getUsuariosApi();
       setUsuarios(data);
       storage.setUserList(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error cargando usuarios:", err);
-      setErrorUsuarios(err.message || "Error al conectar con el servidor");
+      setErrorUsuarios((err as Error).message || "Error al conectar con el servidor");
       const stored = storage.getUserList();
       if (stored.length > 0) setUsuarios(stored);
     } finally {

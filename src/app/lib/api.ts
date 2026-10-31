@@ -22,13 +22,13 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     }
 
     const contentType = response.headers.get("content-type");
-    let errorMessage = `Error del servidor: ${response.status}`;
+    let errorMessage: string;
 
     if (contentType && contentType.includes("application/json")) {
       try {
         const errorData = await response.json();
         errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
-      } catch (e) {
+      } catch {
         errorMessage = "Error parseando la respuesta JSON del servidor";
       }
     } else {

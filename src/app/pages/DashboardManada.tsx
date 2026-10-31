@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router';
-import { Trash2, Pause, Play, CreditCard, AlertCircle, PawPrint, X, Pencil, Check } from 'lucide-react';
+import { Trash2, Pause, Play, AlertCircle, X, Pencil, Check } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useSubscriptions, montoGlobalDe } from '../context/SubscriptionContext';
 import { useManada } from '../context/ManadaContext';

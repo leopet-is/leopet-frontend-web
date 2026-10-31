@@ -43,10 +43,10 @@ export function FundacionDetail() {
         setFundacion(fundacionData);
         setMascotas(mascotasData);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (!isMounted) return;
         console.error("Error al cargar perfil de fundación:", err);
-        setError(err.message || "No se pudo cargar la información de la fundación.");
+        setError((err as Error).message || "No se pudo cargar la información de la fundación.");
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);

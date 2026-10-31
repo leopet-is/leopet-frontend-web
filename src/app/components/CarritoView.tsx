@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { ArrowLeft, Trash2, Heart, CheckCircle2, ShieldCheck, CreditCard, Lock } from 'lucide-react';
+import { Link } from 'react-router';
+import { ArrowLeft, Trash2, Heart, CheckCircle2, CreditCard, Lock } from 'lucide-react';
 import imgJasper from "../../imports/Manada/05315c921ffb0646b298e09ecd7293761ebbf584.png";
 import imgMain from "../../imports/DetalleDeMascotaLeoPet/b5e67b3823fbd4287dcd8b82dc791a0d64b1d4a9.png";
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 export function CarritoView() {
-  const navigate = useNavigate();
-
   const [cartItems, setCartItems] = useState([
     {
       id: 'pluto',

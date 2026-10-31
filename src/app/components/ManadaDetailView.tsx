@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { ArrowLeft, MapPin, Trash2, CreditCard, Heart, ShieldAlert, Check } from 'lucide-react';
+import { ArrowLeft, MapPin, Trash2, CreditCard, Heart, Check } from 'lucide-react';
 import imgJasper from "../../imports/Manada/05315c921ffb0646b298e09ecd7293761ebbf584.png";
 import imgMain from "../../imports/DetalleDeMascotaLeoPet/b5e67b3823fbd4287dcd8b82dc791a0d64b1d4a9.png";
 import { ImageWithFallback } from './figma/ImageWithFallback';

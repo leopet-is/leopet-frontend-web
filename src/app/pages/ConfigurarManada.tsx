@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { ArrowLeft, Trash2, Heart, CreditCard, Lock, CheckCircle2, Edit3, Users, PieChart } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
@@ -12,7 +12,6 @@ import { COMISION_PLATAFORMA } from '../lib/pagos';
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function ConfigurarManada() {
-  const navigate = useNavigate();
   const { mascotas, removeFromManada, montoGlobal, setMontoGlobal, clearManada, nombre, setNombre } = useManada();
   const { isAuthenticated } = useAuth();
   const { addSubscription } = useSubscriptions();

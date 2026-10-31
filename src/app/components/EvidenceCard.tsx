@@ -9,7 +9,7 @@ interface EvidenceCardProps {
   tipo: "foto" | "video";
   titulo: string;
   descripcion: string;
-  imagenUrl: any;
+  imagenUrl: string;
   fecha: string;
   canRate?: boolean;
   canReport?: boolean;
@@ -22,7 +22,6 @@ interface EvidenceCardProps {
 }
 
 export function EvidenceCard({
-  id,
   mascotaNombre,
   fundacionNombre,
   tipo,

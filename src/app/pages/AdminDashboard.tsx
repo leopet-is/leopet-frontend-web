@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { PawPrint, FileCheck, AlertTriangle, TrendingUp, ArrowRight, Gavel, DollarSign, Users } from 'lucide-react';
+import { PawPrint, FileCheck, AlertTriangle, ArrowRight, Gavel, DollarSign, Users } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 import { usePagos } from '../context/PagoContext';
 import { AdminLayout } from './AdminLayout';
@@ -11,9 +11,7 @@ export function AdminDashboard() {
 
   const pendientes = solicitudes.filter((s) => s.estado === "Pendiente").length;
   const aprobadas = solicitudes.filter((s) => s.estado === "Aprobada").length;
-  const rechazadas = solicitudes.filter((s) => s.estado === "Rechazada").length;
   const denunciasAbiertas = denuncias.filter((d) => d.estado === "pendiente" || d.estado === "investigando").length;
-  const denunciasResueltas = denuncias.filter((d) => d.estado === "resuelta").length;
   const apelaciones = pagos.filter((p) => p.estado === "apelada").length;
   const montoPendiente = pagos
     .filter((p) => p.estado === "pendiente_desembolso" || p.estado === "mediada" || p.estado === "apelada")

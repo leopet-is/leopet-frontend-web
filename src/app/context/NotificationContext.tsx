@@ -22,10 +22,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return stored.length > 0 ? stored : MOCK_NOTIFICACIONES;
   });
 
-  const persist = (updated: Notificacion[]) => {
-    setNotificaciones(updated);
-    storage.setNotificaciones(updated);
-  };
+
 
   const agregarNotificacion = useCallback((data: Omit<Notificacion, "id" | "createdAt" | "updatedAt">) => {
     setNotificaciones((prev) => {

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Mail, Lock, User, Heart, IdCard, Eye, EyeOff, CheckCircle2, Phone } from "lucide-react";
+import { X, Mail, Lock, User, Heart, IdCard, Eye, EyeOff, Phone } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import isEmail from "validator/lib/isEmail";
 import { esCedulaValida, esTelefonoEcuador } from '../lib/validators';
@@ -111,8 +111,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       onSuccess?.();
       onClose();
       resetForm();
-    } catch (error: any) {
-      setErrors({ form: error.message || "Ocurrió un error al conectar con el servidor" });
+    } catch (error: unknown) {
+      setErrors({ form: (error as Error).message || "Ocurrió un error al conectar con el servidor" });
     } finally {
       setIsSubmitting(false);
     }

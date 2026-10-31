@@ -19,9 +19,9 @@ export function FundacionesList() {
       setError(null);
       const data = await getFundacionesApi(100, 1);
       setFundaciones(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error al cargar fundaciones:", err);
-      setError(err.message || "Error al conectar con el servidor.");
+      setError((err as Error).message || "Error al conectar con el servidor.");
     } finally {
       setIsLoading(false);
     }

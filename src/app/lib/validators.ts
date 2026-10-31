@@ -27,17 +27,6 @@ const esProvincia = (digits: string): boolean => {
   return codigo >= 1 && codigo <= 24;
 };
 
-const modulo10 = (digits: number[]): number => {
-  const pesos = [2, 1, 2, 1, 2, 1, 2, 1, 2];
-
-  const suma = digits.reduce((acc, digit, index) => {
-    const producto = digit * pesos[index];
-    return acc + (producto > 9 ? producto - 9 : producto);
-  }, 0);
-
-  return (10 - (suma % 10)) % 10;
-};
-
 const modulo11 = (
   digits: number[],
   pesos: number[]
