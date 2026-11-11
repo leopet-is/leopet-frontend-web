@@ -8,11 +8,23 @@ import { useFoundation } from '../context/FoundationContext';
 import { useFavoritos } from '../context/FavoritosContext';
 import { MOCK_PETS } from '../lib/mockData';
 import type { Pet } from '../lib/types';
+import { getMascotaByIdApi } from '../api/mascotas.api';
 
 const FOUNDATION_NAMES: Record<string, string> = {
   "fund-01": "Huellitas Felices",
   "fund-02": "Refugio Almas Peludas",
   "fund-03": "Amigos de Cuatro Patas",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  NO_APADRINADO: "Disponible",
+  REQUIERE_PADRINOS: "Disponible",
+  APADRINADO: "Apadrinado",
+  EN_PROCESO: "En Proceso",
+  EN_TRATAMIENTO: "En Tratamiento",
+  ADOPTADO: "Adoptado",
+  FALLECIDO: "Fallecido",
+  INACTIVO: "Inactivo",
 };
 
 export function PetDetail() {
@@ -22,18 +34,51 @@ export function PetDetail() {
   const foundationContext = useFoundation();
   const { isFavorito, toggleFavorito } = useFavoritos();
 
-  // Combine shelter context with mock data fallback
-  const allPets: Pet[] = React.useMemo(() => {
-    if (foundationContext?.mascotas && foundationContext.mascotas.length > 0) {
-      return foundationContext.mascotas.map((m) => ({
-        ...m,
-        fundacionNombre: m.fundacionNombre || FOUNDATION_NAMES[m.fundacionId] || "Fundación Aliada",
-      })) as Pet[];
-    }
-    return MOCK_PETS;
-  }, [foundationContext?.mascotas]);
+  const [remotePet, setRemotePet] = React.useState<Pet | null>(null);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const [hasFetched, setHasFetched] = React.useState<boolean>(false);
 
-  const pet = allPets.find((p) => p.id === Number(id));
+  React.useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    setIsLoading(true);
+
+    getMascotaByIdApi(id)
+      .then((data) => {
+        if (!isMounted) return;
+        setRemotePet(data);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn("No se pudo obtener la mascota vía API, verificando respaldo:", err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+          setHasFetched(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  // Combine shelter context with mock data fallback
+  const fallbackPet = React.useMemo(() => {
+    if (foundationContext?.mascotas && foundationContext.mascotas.length > 0) {
+      const match = foundationContext.mascotas.find((m) => String(m.id) === String(id));
+      if (match) {
+        return {
+          ...match,
+          fundacionNombre: match.fundacionNombre || FOUNDATION_NAMES[match.fundacionId] || "Fundación Aliada",
+        } as Pet;
+      }
+    }
+    return MOCK_PETS.find((p) => String(p.id) === String(id)) || null;
+  }, [foundationContext?.mascotas, id]);
+
+  const pet = remotePet || fallbackPet;
 
   const isFav = pet ? isFavorito(`pet-${pet.id}`) : false;
 
@@ -46,6 +91,16 @@ export function PetDetail() {
       toast.info(`${pet.nombre} fue retirado de favoritos`);
     }
   };
+
+  if (isLoading && !pet) {
+    return (
+      <div className="bg-white min-h-[60vh] flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-12 h-12 border-4 border-[#00626d] border-t-transparent rounded-full animate-spin mb-4" />
+        <h2 className="text-xl font-bold text-[#004955] mb-1">Cargando información</h2>
+        <p className="text-gray-500 text-sm">Obteniendo detalles de la mascota...</p>
+      </div>
+    );
+  }
 
   if (!pet) {
     return (
@@ -67,7 +122,7 @@ export function PetDetail() {
   }
 
   const isInManada = manadaMascotas.some((a) => a.animalId === String(pet.id));
-  const statusDisplay = pet.status === "NO_APADRINADO" ? "Disponible" : pet.status === "APADRINADO" ? "Apadrinado" : pet.status === "EN_PROCESO" ? "En Proceso" : "Adoptado";
+  const statusDisplay = (pet.status && STATUS_LABELS[pet.status]) || pet.status || "Disponible";
 
   const handleApadrinar = () => {
     if (isInManada) {
@@ -81,7 +136,7 @@ export function PetDetail() {
       montoMensual: 25.00,
       nombre: pet.nombre,
       refugioNombre: pet.fundacionNombre || "",
-      etiqueta: pet.status === "NO_APADRINADO" ? "SALUDABLE" : "ATENCIÓN",
+      etiqueta: pet.status === "EN_TRATAMIENTO" ? "ATENCIÓN" : "SALUDABLE",
       imagenUrl: pet.imagen,
     });
 

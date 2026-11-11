@@ -17,7 +17,10 @@ const TODAY = new Date("2026-07-25");
 
 function daysBetween(dateStr: string): number {
   const d = new Date(dateStr);
-  return Math.max(0, Math.floor((TODAY.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
+  if (isNaN(d.getTime())) return 0;
+  const now = new Date();
+  const refDate = now.getTime() > d.getTime() ? now : new Date("2026-07-25");
+  return Math.max(0, Math.floor((refDate.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
 // ── Factor 1: Urgencia de apadrinamiento (0–35) ────────────────────────────

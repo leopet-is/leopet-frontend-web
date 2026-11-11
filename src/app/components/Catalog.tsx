@@ -10,6 +10,7 @@ import { useFavoritos } from '../context/FavoritosContext';
 import { MOCK_PETS } from '../lib/mockData';
 import { rankPets, isHighPriority, type ScoredPet } from '../lib/recommendation';
 import type { Pet } from '../lib/types';
+import { getMascotasApi } from '../api/mascotas.api';
 import { PetFilterBar, type SpeciesOption, type SortMode } from './PetFilterBar';
 import { CatIcon } from './icons/CatIcon';
 
@@ -191,6 +192,36 @@ export function Catalog() {
   const { addToManada, mascotas: manadaMascotas } = useManada();
   const foundationContext = useFoundation();
 
+  // Live backend data state with fallback
+  const [apiPets, setApiPets] = useState<Pet[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    getMascotasApi({ limit: 100 })
+      .then((res) => {
+        if (!isMounted) return;
+        setApiPets(res.mascotas);
+      })
+      .catch((err: unknown) => {
+        if (!isMounted) return;
+        const msg = (err as Error).message || "No se pudo conectar con el servidor.";
+        console.warn("API de mascotas no disponible, usando respaldo local:", msg);
+        setLoadError(msg);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Initialize state from URL params
   const speciesParam = searchParams.get("especie");
   const initialSpecies: SpeciesOption =
@@ -238,8 +269,11 @@ export function Catalog() {
     setPage(Number(searchParams.get("page")) || 1);
   }, [searchParams]);
 
-  // Combine shelter context with mock data fallback
+  // Priority: live backend pets -> shelter context -> mock data fallback
   const petsSource: Pet[] = useMemo(() => {
+    if (apiPets && apiPets.length > 0) {
+      return apiPets;
+    }
     if (foundationContext?.mascotas && foundationContext.mascotas.length > 0) {
       return foundationContext.mascotas.map((m) => ({
         ...m,
@@ -247,7 +281,7 @@ export function Catalog() {
       })) as Pet[];
     }
     return MOCK_PETS;
-  }, [foundationContext?.mascotas]);
+  }, [apiPets, foundationContext?.mascotas]);
 
   const ranked = useMemo(() => rankPets(petsSource), [petsSource]);
 
@@ -328,7 +362,7 @@ export function Catalog() {
       montoMensual: 25.00,
       nombre: pet.nombre,
       refugioNombre: pet.fundacionNombre || "",
-      etiqueta: pet.status === "NO_APADRINADO" ? "SALUDABLE" : "ATENCIÓN",
+      etiqueta: pet.status === "EN_TRATAMIENTO" || isHighPriority(pet.score) ? "ATENCIÓN" : "SALUDABLE",
       imagenUrl: pet.imagen,
     });
 
@@ -367,7 +401,24 @@ export function Catalog() {
       </div>
 
       <div className="max-w-[1248px] mx-auto px-4 md:px-[96px] mt-10">
-        {sorted.length > 0 ? (
+        {isLoading && !apiPets ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div
+                key={`sk-${idx}`}
+                className="bg-white rounded-[24px] border border-gray-200 overflow-hidden flex flex-col h-[480px] animate-pulse"
+              >
+                <div className="h-[240px] bg-gray-200" />
+                <div className="p-8 flex flex-col gap-4 flex-grow">
+                  <div className="h-7 bg-gray-200 rounded-lg w-2/3" />
+                  <div className="h-4 bg-gray-100 rounded-md w-1/3" />
+                  <div className="h-10 bg-gray-100 rounded-md w-full" />
+                  <div className="mt-auto h-12 bg-gray-200 rounded-full w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sorted.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {paginated.map((pet, i) => (
               <motion.div
