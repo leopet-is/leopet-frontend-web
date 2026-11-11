@@ -23,11 +23,20 @@ function daysBetween(dateStr: string): number {
 // ── Factor 1: Urgencia de apadrinamiento (0–35) ────────────────────────────
 function urgencyScore(pet: Pet): number {
   switch (pet.status) {
-    case "NO_APADRINADO": return 35;
-    case "EN_PROCESO":    return 20;
-    case "APADRINADO":    return 5;
-    case "ADOPTADO":      return 0;
-    default:              return 0;
+    case "NO_APADRINADO":
+    case "REQUIERE_PADRINOS":
+      return 35;
+    case "EN_PROCESO":
+    case "EN_TRATAMIENTO":
+      return 20;
+    case "APADRINADO":
+      return 5;
+    case "ADOPTADO":
+    case "INACTIVO":
+    case "FALLECIDO":
+      return 0;
+    default:
+      return 0;
   }
 }
 

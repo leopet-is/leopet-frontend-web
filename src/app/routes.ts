@@ -1,26 +1,33 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 import { RootLayout } from "./RootLayout";
 import { HomePage } from "./HomePage";
 import { Catalog } from "./components/Catalog";
 import { PetDetail } from "./components/PetDetail";
-import { ConfigurarManada } from "./pages/ConfigurarManada";
-import { Dashboard } from "./pages/Dashboard";
-import { DashboardEvidencias } from "./pages/DashboardEvidencias";
-import { DashboardManada } from "./pages/DashboardManada";
-import { DashboardDenuncias } from "./pages/DashboardDenuncias";
-import { FundacionesList } from "./components/FundacionesList";
-import { FundacionDetail } from "./components/FundacionDetail";
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { AdminSolicitudes } from "./pages/AdminSolicitudes";
-import { AdminDenuncias } from "./pages/AdminDenuncias";
-import { AdminApelaciones } from "./pages/AdminApelaciones";
-import { FoundationDashboard } from "./pages/FoundationDashboard";
-import { FoundationMascotas } from "./pages/FoundationMascotas";
-import { FoundationEvidencias } from "./pages/FoundationEvidencias";
-import { FoundationPadrinos } from "./pages/FoundationPadrinos";
-import { FoundationAdvertencias } from "./pages/FoundationAdvertencias";
-import { FoundationPagos } from "./pages/FoundationPagos";
-import { AdminUsuarios } from "./pages/AdminUsuarios";
+
+// Donor Pages (Code Split)
+const ConfigurarManada = lazy(() => import("./pages/ConfigurarManada").then((m) => ({ default: m.ConfigurarManada })));
+const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const DashboardEvidencias = lazy(() => import("./pages/DashboardEvidencias").then((m) => ({ default: m.DashboardEvidencias })));
+const DashboardManada = lazy(() => import("./pages/DashboardManada").then((m) => ({ default: m.DashboardManada })));
+const DashboardDenuncias = lazy(() => import("./pages/DashboardDenuncias").then((m) => ({ default: m.DashboardDenuncias })));
+const FundacionesList = lazy(() => import("./components/FundacionesList").then((m) => ({ default: m.FundacionesList })));
+const FundacionDetail = lazy(() => import("./components/FundacionDetail").then((m) => ({ default: m.FundacionDetail })));
+
+// Admin Pages (Code Split)
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
+const AdminSolicitudes = lazy(() => import("./pages/AdminSolicitudes").then((m) => ({ default: m.AdminSolicitudes })));
+const AdminDenuncias = lazy(() => import("./pages/AdminDenuncias").then((m) => ({ default: m.AdminDenuncias })));
+const AdminApelaciones = lazy(() => import("./pages/AdminApelaciones").then((m) => ({ default: m.AdminApelaciones })));
+const AdminUsuarios = lazy(() => import("./pages/AdminUsuarios").then((m) => ({ default: m.AdminUsuarios })));
+
+// Foundation Pages (Code Split)
+const FoundationDashboard = lazy(() => import("./pages/FoundationDashboard").then((m) => ({ default: m.FoundationDashboard })));
+const FoundationMascotas = lazy(() => import("./pages/FoundationMascotas").then((m) => ({ default: m.FoundationMascotas })));
+const FoundationEvidencias = lazy(() => import("./pages/FoundationEvidencias").then((m) => ({ default: m.FoundationEvidencias })));
+const FoundationPadrinos = lazy(() => import("./pages/FoundationPadrinos").then((m) => ({ default: m.FoundationPadrinos })));
+const FoundationAdvertencias = lazy(() => import("./pages/FoundationAdvertencias").then((m) => ({ default: m.FoundationAdvertencias })));
+const FoundationPagos = lazy(() => import("./pages/FoundationPagos").then((m) => ({ default: m.FoundationPagos })));
 
 export const router = createBrowserRouter([
   {

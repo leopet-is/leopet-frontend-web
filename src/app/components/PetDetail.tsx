@@ -1,20 +1,72 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import { MapPin, Info, Heart, CheckCircle, CheckCircle2, Syringe, Pill, Stethoscope } from 'lucide-react';
+import React from 'react';
+import { useParams, useNavigate, Link } from 'react-router';
+import { MapPin, Info, Heart, CheckCircle, CheckCircle2, Syringe, Pill, Stethoscope, ArrowLeft } from 'lucide-react';
+import { toast } from 'sonner';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
+import { useFoundation } from '../context/FoundationContext';
+import { useFavoritos } from '../context/FavoritosContext';
 import { MOCK_PETS } from '../lib/mockData';
+import type { Pet } from '../lib/types';
+
+const FOUNDATION_NAMES: Record<string, string> = {
+  "fund-01": "Huellitas Felices",
+  "fund-02": "Refugio Almas Peludas",
+  "fund-03": "Amigos de Cuatro Patas",
+};
 
 export function PetDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToManada, mascotas: manadaMascotas } = useManada();
-  const [added, setAdded] = useState(false);
+  const foundationContext = useFoundation();
+  const { isFavorito, toggleFavorito } = useFavoritos();
 
-  const pet = MOCK_PETS.find((p) => p.id === Number(id)) || MOCK_PETS[0];
+  // Combine shelter context with mock data fallback
+  const allPets: Pet[] = React.useMemo(() => {
+    if (foundationContext?.mascotas && foundationContext.mascotas.length > 0) {
+      return foundationContext.mascotas.map((m) => ({
+        ...m,
+        fundacionNombre: m.fundacionNombre || FOUNDATION_NAMES[m.fundacionId] || "Fundación Aliada",
+      })) as Pet[];
+    }
+    return MOCK_PETS;
+  }, [foundationContext?.mascotas]);
+
+  const pet = allPets.find((p) => p.id === Number(id));
+
+  const isFav = pet ? isFavorito(`pet-${pet.id}`) : false;
+
+  const handleFavoriteClick = () => {
+    if (!pet) return;
+    toggleFavorito(`pet-${pet.id}`);
+    if (!isFav) {
+      toast.success(`${pet.nombre} fue guardado en tus favoritos`);
+    } else {
+      toast.info(`${pet.nombre} fue retirado de favoritos`);
+    }
+  };
+
+  if (!pet) {
+    return (
+      <div className="bg-white min-h-[60vh] flex flex-col items-center justify-center p-8 text-center">
+        <Info size={48} className="text-[#ee5871] mb-4" />
+        <h1 className="text-2xl font-bold text-[#004955] mb-2">Mascota no encontrada</h1>
+        <p className="text-gray-600 max-w-md mb-6 text-sm">
+          La mascota solicitada no existe o no se encuentra disponible actualmente.
+        </p>
+        <Link
+          to="/mascotas"
+          className="inline-flex items-center gap-2 bg-[#00626d] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-[#004955] transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Volver al catálogo de mascotas
+        </Link>
+      </div>
+    );
+  }
 
   const isInManada = manadaMascotas.some((a) => a.animalId === String(pet.id));
-
   const statusDisplay = pet.status === "NO_APADRINADO" ? "Disponible" : pet.status === "APADRINADO" ? "Apadrinado" : pet.status === "EN_PROCESO" ? "En Proceso" : "Adoptado";
 
   const handleApadrinar = () => {
@@ -32,8 +84,14 @@ export function PetDetail() {
       etiqueta: pet.status === "NO_APADRINADO" ? "SALUDABLE" : "ATENCIÓN",
       imagenUrl: pet.imagen,
     });
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+
+    toast.success(`¡${pet.nombre} fue agregado a tu Manada!`, {
+      description: "Puedes revisar y configurar tu aporte en Mi Manada.",
+      action: {
+        label: "Ver Manada",
+        onClick: () => navigate("/mi-manada/configurar"),
+      },
+    });
   };
 
   return (
@@ -53,7 +111,20 @@ export function PetDetail() {
 
             <div className="bg-white border border-[#BDC8CA]/30 rounded-[24px] p-8 shadow-sm flex flex-col justify-between">
               <div>
-                <h1 className="text-[#1b1c1c] text-2xl sm:text-3xl md:text-[40px] font-semibold tracking-[1.6px] mb-2">{pet.nombre}</h1>
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <h1 className="text-[#1b1c1c] text-2xl sm:text-3xl md:text-[40px] font-semibold tracking-[1.6px]">{pet.nombre}</h1>
+                  <button
+                    type="button"
+                    onClick={handleFavoriteClick}
+                    className="p-2.5 rounded-full border border-gray-200 hover:border-[#ee5871] hover:bg-red-50 text-gray-500 transition-all cursor-pointer shadow-2xs"
+                    aria-label={isFav ? "Quitar de favoritos" : "Guardar en favoritos"}
+                  >
+                    <Heart
+                      size={22}
+                      className={isFav ? "fill-[#ee5871] text-[#ee5871]" : "hover:text-[#ee5871]"}
+                    />
+                  </button>
+                </div>
                 <div className="flex items-center gap-2 text-[#004955] mb-8">
                   <MapPin size={18} className="text-[#00626D]" />
                   <span className="text-sm font-semibold tracking-wide">{pet.fundacionNombre}</span>
@@ -80,12 +151,6 @@ export function PetDetail() {
               </div>
 
               <div className="mt-8 space-y-3">
-                {added && (
-                  <div className="bg-[#47f6a1]/20 border border-[#0d9955]/30 rounded-xl p-3 flex items-center gap-2 text-[#0d9955] font-medium text-sm animate-in fade-in duration-200">
-                    <CheckCircle2 size={16} />
-                    Agregado a tu Manada
-                  </div>
-                )}
                 <button
                   onClick={handleApadrinar}
                   className="w-full bg-[#00626d] text-[#07c4e1] py-4 rounded-full text-[20px] font-medium tracking-wide shadow-md hover:bg-[#004955] transition-all flex items-center justify-center gap-3 cursor-pointer"

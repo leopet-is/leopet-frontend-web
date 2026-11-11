@@ -118,7 +118,18 @@
 
 ---
 
-## Especificación de Pantallas y Modales de Auth
+## Especificación de Pantallas y Componentes Globales
+
+### `NavbarDonador` — Barra de Navegación Principal
+- **Estado:** IMPLEMENTADA
+- Contenedor centrado con ancho máximo (`max-w-[1248px] mx-auto`) y espaciado lateral respirable para armonizar con el catálogo y páginas interiores.
+- **Zona izquierda:** Logo de LeoPet con enlace al inicio (`/`).
+- **Zona derecha (Menú unificado):**
+  - Enlaces de destino directo con indicador de ruta activa (`NavLink`): `Mascotas` y `Fundaciones`.
+  - Divisor vertical sutil (`h-5 w-px bg-white/25`).
+  - Botón de notificaciones con conteo de no leídas y modal desplegable (`Bell`).
+  - Botón de usuario autenticado (avatar + menú desplegable con Dashboard, Admin, Fundación, Cerrar sesión) o botón "Iniciar Sesión" (`AuthModal`).
+- Cajón de menú responsive para dispositivos móviles con accesos directos y estados activos sincronizados.
 
 ### Modal / Pantalla de Registro de Usuario (`/registro` o Modal Rápido)
 - **Campos requeridos:** Nombre, Apellido, Cédula (10 dígitos), Correo Electrónico, Contraseña (mín. 8 caracteres), Confirmar contraseña.
@@ -128,9 +139,17 @@
 
 ### `/mascotas` — Catálogo de Mascotas
 - **Estado:** IMPLEMENTADA
-- Muestra grid de tarjetas con datos de `Mascota`.
-- Filtros por especie (`Perro` / `Gato`) y búsqueda por nombre o raza.
-- Botón **"Apadrinar"**: agrega la mascota a la "Manada por Defecto" (`"Mi Primera Manada"`) en `localStorage`.
+- Muestra grid responsive de tarjetas animadas con datos de `Mascota`.
+- Filtros por especie (`Todos`, `Perro`, `Gato`) con badges de conteo dinámico contextual.
+- Filtro por casos prioritarios (`⚡ Necesitan apoyo`) conectado al algoritmo de scoring de urgencia (`isHighPriority`).
+- Búsqueda en tiempo real por nombre, raza o fundación con normalización diacrítica (insensible a tildes) y botón de borrado rápido (`X`).
+- Ordenamiento dinámico (`Recomendados`, `Más recientes`, `Nombre A-Z`).
+- Botón de restablecimiento (`"Limpiar filtros"`) y estado vacío interactivo con ilustración vectorial de gato (`CatIcon.tsx` / `noun_Cat_8291363.svg`) y botón de recuperación.
+- Sincronización bidireccional con parámetros de URL (`useSearchParams`) y debounce de búsqueda (250ms).
+- Integración en tiempo real con `FoundationContext` (refleja mascotas agregadas o modificadas por refugios).
+- Marcado de favoritos (`FavoritosContext`) directamente en cada tarjeta con notificaciones toast (`sonner`).
+- Detección de mascotas ya agregadas con estado interactivo *"En tu Manada"*.
+- Botón **"Apadrinar"**: agrega la mascota a la "Manada por Defecto" (`"Mi Primera Manada"`) en `localStorage` y despliega notificación toast flotante con acceso directo a Mi Manada.
 
 ### `/mascota/:id` — Detalle de Mascota
 - **Estado:** IMPLEMENTADA

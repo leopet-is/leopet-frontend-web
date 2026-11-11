@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import svgPaths from "../../imports/NavbarDonador/svg-hguxyjw148";
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -59,30 +59,58 @@ export function NavbarDonador() {
 
   return (
     <>
-      <nav className="bg-[#004955] h-[70px] w-full px-4 md:px-8 lg:px-12 flex items-center justify-between sticky top-0 z-50 shadow-md" role="navigation" aria-label="Menú principal">
-        <Link to="/" className="h-[50px] w-[60px] flex-shrink-0" aria-label="LeoPet — Ir al inicio">
-          <svg className="size-full" fill="none" viewBox="0 0 60 50" aria-hidden="true">
-            <g id="Group 1">
-              <path d={svgPaths.p39cb6400} fill="white" />
-              <path d={svgPaths.p1b35b7a0} fill="#EE5871" />
-              <path d={svgPaths.p2522ae00} fill="#EE5871" />
-              <path d={svgPaths.p3d6cebf1} fill="white" />
-              <path d={svgPaths.p17fc5000} fill="white" />
-              <path d={svgPaths.p1073b100} fill="#EE5871" />
-              <path d={svgPaths.p101f8c40} fill="white" />
-              <path d={svgPaths.p39f6f000} fill="white" />
-              <path d={svgPaths.p1226c6c0} fill="white" />
-              <path d={svgPaths.pc3ed400} fill="white" />
-            </g>
-          </svg>
-        </Link>
+      <nav className="bg-[#004955] h-[70px] w-full sticky top-0 z-50 shadow-md" role="navigation" aria-label="Menú principal">
+        <div className="max-w-[1248px] mx-auto h-full px-4 sm:px-6 md:px-8 lg:px-12 flex items-center justify-between">
+          <Link to="/" className="h-[46px] w-[56px] flex-shrink-0 flex items-center transition-opacity hover:opacity-90" aria-label="LeoPet — Ir al inicio">
+            <svg className="size-full" fill="none" viewBox="0 0 60 50" aria-hidden="true">
+              <g id="Group 1">
+                <path d={svgPaths.p39cb6400} fill="white" />
+                <path d={svgPaths.p1b35b7a0} fill="#EE5871" />
+                <path d={svgPaths.p2522ae00} fill="#EE5871" />
+                <path d={svgPaths.p3d6cebf1} fill="white" />
+                <path d={svgPaths.p17fc5000} fill="white" />
+                <path d={svgPaths.p1073b100} fill="#EE5871" />
+                <path d={svgPaths.p101f8c40} fill="white" />
+                <path d={svgPaths.p39f6f000} fill="white" />
+                <path d={svgPaths.p1226c6c0} fill="white" />
+                <path d={svgPaths.pc3ed400} fill="white" />
+              </g>
+            </svg>
+          </Link>
 
-        <div className="hidden md:flex items-center gap-2 lg:gap-4 text-white text-[15px] lg:text-[18px] font-medium font-['Host_Grotesk']">
-          <Link to="/mascotas" className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">Mascotas</Link>
-          <Link to="/fundaciones" className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">Fundaciones</Link>
-        </div>
+          {/* Right cluster: Navigation links + Divider + User actions */}
+          <div className="flex items-center gap-3 md:gap-5 lg:gap-6">
+            <div className="hidden md:flex items-center gap-1.5 lg:gap-2 text-[15px] lg:text-[16px] font-medium font-['Host_Grotesk']">
+              <NavLink
+                to="/mascotas"
+                className={({ isActive }) =>
+                  `px-3.5 py-1.5 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-white/20 text-white font-semibold shadow-sm'
+                      : 'text-white/85 hover:text-white hover:bg-white/10'
+                  }`
+                }
+              >
+                Mascotas
+              </NavLink>
+              <NavLink
+                to="/fundaciones"
+                className={({ isActive }) =>
+                  `px-3.5 py-1.5 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-white/20 text-white font-semibold shadow-sm'
+                      : 'text-white/85 hover:text-white hover:bg-white/10'
+                  }`
+                }
+              >
+                Fundaciones
+              </NavLink>
+            </div>
 
-        <div className="flex items-center gap-2 md:gap-3">
+            {/* Subtle vertical separator between nav links and user actions */}
+            <div className="hidden md:block h-5 w-[1px] bg-white/25" aria-hidden="true" />
+
+            <div className="flex items-center gap-2 md:gap-3">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -296,6 +324,8 @@ export function NavbarDonador() {
               <span className="sm:hidden">Entrar</span>
             </button>
           )}
+            </div>
+          </div>
         </div>
       </nav>
 
@@ -307,15 +337,39 @@ export function NavbarDonador() {
             role="menu"
           >
             <div className="flex flex-col text-white text-lg font-medium font-['Host_Grotesk'] gap-1">
-              <Link to="/" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Inicio</Link>
-              <a href={isHome ? "#nosotros" : "/#nosotros"} className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Nosotros</a>
-              <a href={isHome ? "#mision" : "/#mision"} className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Misión</a>
+              <NavLink
+                to="/mascotas"
+                className={({ isActive }) =>
+                  `px-3 py-2.5 rounded-lg transition-colors ${
+                    isActive ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'
+                  }`
+                }
+                role="menuitem"
+              >
+                Mascotas
+              </NavLink>
+              <NavLink
+                to="/fundaciones"
+                className={({ isActive }) =>
+                  `px-3 py-2.5 rounded-lg transition-colors ${
+                    isActive ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'
+                  }`
+                }
+                role="menuitem"
+              >
+                Fundaciones
+              </NavLink>
             </div>
-            <div className="w-full h-px bg-white/20 my-3" />
-            <div className="flex flex-col text-white text-lg font-medium font-['Host_Grotesk'] gap-1">
-              <Link to="/mascotas" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Mascotas</Link>
-              <Link to="/fundaciones" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Fundaciones</Link>
-            </div>
+
+            {isHome && (
+              <>
+                <div className="w-full h-px bg-white/20 my-3" />
+                <div className="flex flex-col text-white text-lg font-medium font-['Host_Grotesk'] gap-1">
+                  <a href="#nosotros" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Nosotros</a>
+                  <a href="#mision" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Misión</a>
+                </div>
+              </>
+            )}
 
             {isAuthenticated && (
               <>
