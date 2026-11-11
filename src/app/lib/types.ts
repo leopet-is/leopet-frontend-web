@@ -1,7 +1,7 @@
 export interface Pet {
   id: number;
   nombre: string;
-  status: "NO_APADRINADO" | "APADRINADO" | "EN_PROCESO" | "ADOPTADO";
+  status: "NO_APADRINADO" | "APADRINADO" | "EN_PROCESO" | "ADOPTADO" | "REQUIERE_PADRINOS" | "EN_TRATAMIENTO" | "FALLECIDO" | "INACTIVO" | string;
   especie: string;
   raza?: string;
   descripcion: string;
@@ -14,7 +14,7 @@ export interface Pet {
   updatedAt?: string;
   edad?: number;
   peso?: number;
-  sexo?: "Macho" | "Hembra";
+  sexo?: "Macho" | "Hembra" | string;
   esterilizacion?: boolean | null;
   vacunacion?: boolean | null;
   desparasitacion?: boolean | null;
@@ -23,6 +23,9 @@ export interface Pet {
   fechaRescate?: string;
   historia?: string;
   ubicacion?: string;
+  fecha_nacimiento_estimada?: string;
+  monto_meta_mensual?: number;
+  monto_recaudado_actual?: number;
 }
 
 export interface ManadaAnimal {

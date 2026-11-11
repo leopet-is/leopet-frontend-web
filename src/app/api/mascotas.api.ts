@@ -1,5 +1,6 @@
 // src/app/api/mascotas.api.ts
 import { apiFetch } from "../lib/api";
+import type { Pet } from "../lib/types";
 
 export interface ApiAnimal {
   id: number;
@@ -14,10 +15,17 @@ export interface ApiAnimal {
   fundacion?: string;
   sexo?: "MACHO" | "HEMBRA" | string;
   fecha_nacimiento_estimada?: string;
-  peso?: number;
-  monto_meta_mensual?: number;
-  monto_recaudado_actual?: number;
+  peso?: number | string;
+  monto_meta_mensual?: number | string;
+  monto_recaudado_actual?: number | string;
   visible?: boolean;
+  enfermedades?: string;
+  esterilizacion?: boolean | null;
+  vacunacion?: boolean | null;
+  desparasitacion?: boolean | null;
+  fecha_rescate?: string;
+  fecha_registro?: string;
+  historia?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -30,21 +38,22 @@ export interface GetMascotasResponse {
   result: ApiAnimal[];
 }
 
-export interface MascotaFrontend {
-  id: number;
-  nombre: string;
-  status: string; // Mantiene el valor directo del backend: REQUIERE_PADRINOS, APADRINADO, etc.
-  especie: string;
-  raza: string;
-  descripcion: string;
-  imagen: string;
-  galeria: string[];
-  fundacionId: string;
-  fundacionNombre?: string;
-  edad: number;
-  sexo: string;
-  ubicacion: string;
-  fecha_nacimiento_estimada?: string;
+export type MascotaFrontend = Pet;
+
+export interface GetMascotasParams {
+  especie?: string; // "todos" | "Perro" | "Gato" | "PERRO" | "GATO"
+  q?: string;
+  page?: number;
+  limit?: number;
+  fundacionId?: string | number;
+}
+
+export interface MascotasPaginatedResult {
+  mascotas: Pet[];
+  total: number;
+  totalPages: number;
+  page: number;
+  limit: number;
 }
 
 const DEFAULT_ANIMAL_IMAGE =
@@ -71,29 +80,83 @@ function normalizarGaleria(galeria: unknown): string[] {
 }
 
 /**
- * Función adaptadora para traducir el modelo del backend al modelo usado por las vistas frontend,
- * manteniendo el campo status coincidente con los valores del backend.
+ * Función adaptadora para traducir el modelo del backend al modelo Pet usado por el frontend.
  */
-export function mapApiAnimalToFrontend(apiAnimal: ApiAnimal): MascotaFrontend {
-  const sexoFormateado = apiAnimal.sexo
-    ? apiAnimal.sexo.charAt(0).toUpperCase() + apiAnimal.sexo.slice(1).toLowerCase()
-    : "Desconocido";
+export function mapApiAnimalToFrontend(apiAnimal: ApiAnimal): Pet {
+  const rawSexo = (apiAnimal.sexo || "").toUpperCase();
+  const sexoFormateado: "Macho" | "Hembra" | string =
+    rawSexo === "MACHO" ? "Macho" : rawSexo === "HEMBRA" ? "Hembra" : "Macho";
+
+  const rawEspecie = (apiAnimal.especie || "").toUpperCase();
+  const especieFormateada =
+    rawEspecie === "PERRO" ? "Perro" : rawEspecie === "GATO" ? "Gato" : "Otro";
 
   return {
     id: apiAnimal.id,
     nombre: apiAnimal.nombre || "Sin nombre",
-    status: apiAnimal.status, // Coincide con el backend (ej. REQUIERE_PADRINOS)
-    especie: apiAnimal.especie || "OTRO",
+    status: apiAnimal.status || "REQUIERE_PADRINOS",
+    especie: especieFormateada,
     raza: apiAnimal.raza || "Mestizo",
     descripcion: apiAnimal.descripcion || "Sin descripción disponible.",
+    historia: apiAnimal.historia || apiAnimal.descripcion || "Sin historia disponible.",
     imagen: apiAnimal.imagen && apiAnimal.imagen.trim() !== "" ? apiAnimal.imagen : DEFAULT_ANIMAL_IMAGE,
     galeria: normalizarGaleria(apiAnimal.galeria),
-    fundacionId: String(apiAnimal.fundacion_id),
+    fundacionId: String(apiAnimal.fundacion_id || ""),
     fundacionNombre: apiAnimal.fundacion,
     edad: calcularEdad(apiAnimal.fecha_nacimiento_estimada),
+    peso: apiAnimal.peso != null ? Number(apiAnimal.peso) : undefined,
     sexo: sexoFormateado,
     ubicacion: apiAnimal.fundacion || "Ecuador",
+    visible: apiAnimal.visible !== false,
+    esterilizacion: typeof apiAnimal.esterilizacion === "boolean" ? apiAnimal.esterilizacion : null,
+    vacunacion: typeof apiAnimal.vacunacion === "boolean" ? apiAnimal.vacunacion : null,
+    desparasitacion: typeof apiAnimal.desparasitacion === "boolean" ? apiAnimal.desparasitacion : null,
+    enfermedades: apiAnimal.enfermedades || "",
+    fechaRegistro: apiAnimal.fecha_registro || apiAnimal.createdAt,
+    fechaRescate: apiAnimal.fecha_rescate,
     fecha_nacimiento_estimada: apiAnimal.fecha_nacimiento_estimada,
+    monto_meta_mensual: apiAnimal.monto_meta_mensual != null ? Number(apiAnimal.monto_meta_mensual) : undefined,
+    monto_recaudado_actual: apiAnimal.monto_recaudado_actual != null ? Number(apiAnimal.monto_recaudado_actual) : undefined,
+    createdAt: apiAnimal.createdAt,
+    updatedAt: apiAnimal.updatedAt,
+  };
+}
+
+/**
+ * GET /animal
+ * Consulta paginada y filtrada del catálogo general de animales.
+ */
+export async function getMascotasApi(
+  params: GetMascotasParams = {}
+): Promise<MascotasPaginatedResult> {
+  const query = new URLSearchParams();
+
+  if (params.page) query.set("page", String(params.page));
+  // El backend usa limit=1 por defecto si no se especifica; fijamos un límite adecuado
+  query.set("limit", String(params.limit || 50));
+
+  if (params.especie && params.especie.toLowerCase() !== "todos") {
+    query.set("especie", params.especie.toUpperCase());
+  }
+
+  if (params.q && params.q.trim()) {
+    query.set("q", params.q.trim());
+  }
+
+  if (params.fundacionId) {
+    query.set("fundacionId", String(params.fundacionId));
+  }
+
+  const response = await apiFetch<GetMascotasResponse>(`/animal?${query.toString()}`, {
+    method: "GET",
+  });
+
+  return {
+    mascotas: (response.result || []).map(mapApiAnimalToFrontend),
+    total: response.total ?? (response.result || []).length,
+    totalPages: response.totalPages ?? 1,
+    page: response.page ?? 1,
+    limit: response.limit ?? 50,
   };
 }
 
@@ -105,7 +168,7 @@ export async function getMascotasByFundacionApi(
   fundacionId: string | number,
   limit = 100,
   page = 1
-): Promise<MascotaFrontend[]> {
+): Promise<Pet[]> {
   const response = await apiFetch<GetMascotasResponse>(
     `/animal/app/fundacion/${fundacionId}?limit=${limit}&page=${page}`,
     {
@@ -119,7 +182,7 @@ export async function getMascotasByFundacionApi(
  * GET /animal/:animalId
  * Obtiene el detalle de un animal por su ID
  */
-export async function getMascotaByIdApi(animalId: string | number): Promise<MascotaFrontend | null> {
+export async function getMascotaByIdApi(animalId: string | number): Promise<Pet | null> {
   const response = await apiFetch<{ result: ApiAnimal | [] }>(`/animal/${animalId}`, {
     method: "GET",
   });
@@ -128,3 +191,53 @@ export async function getMascotaByIdApi(animalId: string | number): Promise<Masc
   }
   return mapApiAnimalToFrontend(response.result as ApiAnimal);
 }
+
+/**
+ * POST /animal
+ * Crea un nuevo animal (requiere token de administrador de fundación)
+ */
+export async function createMascotaApi(data: Partial<ApiAnimal>): Promise<Pet> {
+  const payload = {
+    ...data,
+    especie: data.especie ? data.especie.toUpperCase() : "PERRO",
+    sexo: data.sexo ? data.sexo.toUpperCase() : "MACHO",
+  };
+  const response = await apiFetch<{ mensaje: string; result: ApiAnimal }>("/animal", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return mapApiAnimalToFrontend(response.result);
+}
+
+/**
+ * PUT /animal/:animalId
+ * Actualiza un animal existente (requiere token de administrador de fundación)
+ */
+export async function updateMascotaApi(
+  animalId: number | string,
+  data: Partial<ApiAnimal>
+): Promise<Pet> {
+  const payload: Partial<ApiAnimal> = { ...data };
+  if (payload.especie) payload.especie = payload.especie.toUpperCase();
+  if (payload.sexo) payload.sexo = payload.sexo.toUpperCase();
+
+  const response = await apiFetch<{ mensaje: string; result: ApiAnimal }>(
+    `/animal/${animalId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }
+  );
+  return mapApiAnimalToFrontend(response.result);
+}
+
+/**
+ * DELETE /animal/:animalId
+ * Elimina un animal existente (requiere token de administrador de fundación)
+ */
+export async function deleteMascotaApi(animalId: number | string): Promise<{ mensaje: string }> {
+  return apiFetch<{ mensaje: string }>(`/animal/${animalId}`, {
+    method: "DELETE",
+  });
+}
+
