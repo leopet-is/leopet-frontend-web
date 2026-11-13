@@ -19,6 +19,8 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   if (!response.ok) {
     if (response.status === 401) {
       localStorage.removeItem('leopet_token');
+      localStorage.removeItem('leopet_user');
+      window.dispatchEvent(new Event('leopet:unauthorized'));
     }
 
     const contentType = response.headers.get("content-type");

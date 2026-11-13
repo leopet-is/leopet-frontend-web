@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
 
@@ -65,9 +66,26 @@ function mapApiUserToAuthUser(apiUser: ApiAuthUser): AuthUser {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(
-    () => storage.getUser()
-  );
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const storedUser = storage.getUser();
+    const storedToken = storage.getToken();
+    // Evita sesiones "fantasma" donde el usuario existe en localStorage pero no hay token JWT real
+    if (storedUser && !storedToken) {
+      storage.setUser(null);
+      return null;
+    }
+    return storedUser;
+  });
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      storage.setUser(null);
+      storage.setToken(null);
+    };
+    window.addEventListener("leopet:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("leopet:unauthorized", handleUnauthorized);
+  }, []);
 
   const login = useCallback(
     async (correo: string, password: string): Promise<void> => {
