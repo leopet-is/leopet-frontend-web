@@ -27,7 +27,7 @@ export function FoundationPadrinos() {
             <div>
               <p className="text-[#3e494a] text-xs font-medium">Padrinos Activos</p>
               <p className="text-[#004955] text-2xl font-bold">{isLoadingPadrinos ? "…" : errorPadrinos ? "—" : activos}</p>
-            </div>}
+            </div>
           </div>
           <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 p-5 flex items-center gap-4 shadow-sm">
             <div className="bg-[#004955]/10 p-3 rounded-xl"><DollarSign size={24} className="text-[#004955]" /></div>
@@ -111,7 +111,7 @@ export function FoundationPadrinos() {
               <p className="text-gray-500">No hay padrinos activos para mostrar</p>
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </FoundationLayout>
   );
