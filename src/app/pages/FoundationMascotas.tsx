@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Plus,
   Search,
@@ -9,7 +9,6 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
-  Lock,
   FileText,
   AlertCircle,
   Upload,
@@ -21,7 +20,8 @@ import {
 import { useFoundation } from '../context/FoundationContext';
 import { useAuth } from '../context/AuthContext';
 import { FoundationLayout } from './FoundationLayout';
-import { createMascotaApi, updateMascotaApi } from '../api/mascotas.api';
+import { createMascotaApi, getMascotasByFundacionApi, MAX_UPLOAD_IMAGE_SIZE, updateMascotaApi, uploadFileApi } from '../api/mascotas.api';
+import type { Pet } from '../lib/types';
 import {
   validatePetDraft,
   validatePetPublish,
@@ -29,14 +29,6 @@ import {
   type PetFormData,
 } from '../lib/petValidation';
 import { storage } from '../lib/storage';
-
-import imgMain from "../../imports/DetalleDeMascotaLeoPet/b5e67b3823fbd4287dcd8b82dc791a0d64b1d4a9.png";
-import imgFood from "../../imports/DetalleDeMascotaLeoPet/9ec279e8e0b77d8a1cef5b76d12950fe70e8b841.png";
-import imgPlay from "../../imports/DetalleDeMascotaLeoPet/bd95c8085784a9dd890c235868f306b717608099.png";
-import imgPluto from "../../imports/Catalog/7abaafcc2a09d50e0fc877db77c9c704cd360ae6.png";
-import imgJasper from "../../imports/Manada/05315c921ffb0646b298e09ecd7293761ebbf584.png";
-
-const IMAGENES_MOCK = [imgMain, imgFood, imgPlay, imgPluto, imgJasper];
 
 export type TabOption = 'todas' | 'publicadas' | 'borradores';
 
@@ -49,7 +41,7 @@ const EMPTY_FORM: PetFormData = {
   especie: "Perro",
   descripcion: "",
   historia: "",
-  imagen: IMAGENES_MOCK[0],
+  imagen: "",
   galeria: [],
   visible: true,
   status: "NO_APADRINADO",
@@ -85,6 +77,9 @@ const statusBadgeClass: Record<string, string> = {
 export function FoundationMascotas() {
   const { mascotas, addMascota, updateMascota } = useFoundation();
   const { user } = useAuth();
+  const [apiMascotas, setApiMascotas] = useState<Pet[] | null>(null);
+  const [isLoadingMascotas, setIsLoadingMascotas] = useState(false);
+  const [mascotasLoadError, setMascotasLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TabOption>('todas');
   const [showModal, setShowModal] = useState(false);
@@ -94,16 +89,59 @@ export function FoundationMascotas() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [validationBanner, setValidationBanner] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'amber' | 'error' } | null>(null);
-  const [showImagePicker, setShowImagePicker] = useState(false);
-  const [imageUrlInput, setImageUrlInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mascotasRequestIdRef = useRef(0);
 
-  const fundacionId = user?.fundacionId
-    ? String(user.fundacionId)
-    : (user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03");
+  const apiFundacionId = user?.fundacionId;
+  const fundacionId = apiFundacionId != null
+    ? String(apiFundacionId)
+    : (user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : user?.id === "usr-fund3" ? "fund-03" : "");
 
-  const foundationMascotas = mascotas.filter((m) => m.fundacionId === fundacionId);
+  const reloadMascotas = useCallback(async () => {
+    if (apiFundacionId == null) {
+      setApiMascotas(null);
+      setIsLoadingMascotas(false);
+      return;
+    }
+
+    const requestId = ++mascotasRequestIdRef.current;
+    setIsLoadingMascotas(true);
+    setMascotasLoadError(null);
+    try {
+      const result = await getMascotasByFundacionApi(apiFundacionId);
+      if (requestId === mascotasRequestIdRef.current) {
+        setApiMascotas(result);
+      }
+    } catch (error) {
+      if (requestId === mascotasRequestIdRef.current) {
+        console.error("Error al cargar las mascotas de la fundación:", error);
+        setMascotasLoadError(error instanceof Error ? error.message : "No se pudieron cargar las mascotas.");
+      }
+    } finally {
+      if (requestId === mascotasRequestIdRef.current) {
+        setIsLoadingMascotas(false);
+      }
+    }
+  }, [apiFundacionId]);
+
+  useEffect(() => {
+    void reloadMascotas();
+    return () => {
+      mascotasRequestIdRef.current += 1;
+    };
+  }, [reloadMascotas]);
+
+  const localFoundationMascotas = mascotas.filter((m) => m.fundacionId === fundacionId);
+  const foundationMascotas: Pet[] = apiMascotas
+    ? [
+        ...apiMascotas,
+        ...localFoundationMascotas.filter(
+          (m) => m.id >= 1_000_000_000_000 && !apiMascotas.some((apiPet) => apiPet.id === m.id)
+        ),
+      ]
+    : localFoundationMascotas;
 
   const counts = {
     todas: foundationMascotas.length,
@@ -141,12 +179,10 @@ export function FoundationMascotas() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setValidationBanner(null);
-    setShowImagePicker(false);
-    setImageUrlInput("");
     setShowModal(true);
   };
 
-  const openEdit = (mascota: typeof mascotas[0]) => {
+  const openEdit = (mascota: Pet) => {
     setEditingId(mascota.id);
     setStep(1);
     setForm({
@@ -158,7 +194,7 @@ export function FoundationMascotas() {
       especie: mascota.especie || "Perro",
       descripcion: mascota.descripcion || "",
       historia: mascota.historia || "",
-      imagen: mascota.imagen || IMAGENES_MOCK[0],
+      imagen: mascota.imagen || "",
       galeria: mascota.galeria || [],
       visible: mascota.visible !== false,
       status: mascota.status || "NO_APADRINADO",
@@ -169,33 +205,41 @@ export function FoundationMascotas() {
     });
     setFormErrors({});
     setValidationBanner(null);
-    setShowImagePicker(false);
-    setImageUrlInput("");
     setShowModal(true);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        setFormErrors((prev) => ({ ...prev, imagen: "Por favor selecciona un archivo de imagen válido" }));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setForm((prev) => ({ ...prev, imagen: result }));
-        setImageUrlInput("");
-        clearFieldError("imagen");
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+    if (!file) return;
 
-  const handleImageUrlChange = (url: string) => {
-    setImageUrlInput(url);
-    setForm((prev) => ({ ...prev, imagen: url }));
-    clearFieldError("imagen");
+    if (!file.type.startsWith("image/")) {
+      setFormErrors((prev) => ({ ...prev, imagen: "Por favor selecciona un archivo de imagen válido." }));
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
+      setFormErrors((prev) => ({ ...prev, imagen: "La imagen no puede superar los 10 MB." }));
+      e.target.value = "";
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const imageUrl = await uploadFileApi(file);
+      setForm((prev) => ({ ...prev, imagen: imageUrl }));
+      clearFieldError("imagen");
+      showToast("Imagen subida correctamente.");
+    } catch (error) {
+      console.error("Error al subir imagen de mascota:", error);
+      setFormErrors((prev) => ({
+        ...prev,
+        imagen: error instanceof Error ? error.message : "No se pudo subir la imagen.",
+      }));
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = "";
+    }
   };
 
   const handleNextStep = () => {
@@ -255,10 +299,16 @@ export function FoundationMascotas() {
             visible: false,
           });
           updateMascota(editingId, { ...draftData, ...apiPet });
+          setApiMascotas((current) =>
+            current?.map((pet) => (pet.id === editingId ? { ...pet, ...apiPet } : pet)) ?? current
+          );
           showToast("Borrador guardado en la base de datos", "amber");
         } catch (apiErr) {
           console.warn("Aviso API update, respaldo local:", apiErr);
           updateMascota(editingId, draftData);
+          setApiMascotas((current) =>
+            current?.map((pet) => (pet.id === editingId ? { ...pet, ...draftData } : pet)) ?? current
+          );
           showToast("Borrador guardado localmente", "amber");
         }
       } else if (token && !editingId) {
@@ -279,6 +329,10 @@ export function FoundationMascotas() {
             ...apiPet,
             fundacionId: apiPet.fundacionId || fundacionId,
           });
+          setApiMascotas((current) => [
+            apiPet,
+            ...(current || []).filter((pet) => pet.id !== apiPet.id),
+          ]);
           showToast("Borrador registrado en la base de datos", "amber");
         } catch (apiErr) {
           console.warn("Aviso API create, respaldo local:", apiErr);
@@ -356,10 +410,16 @@ export function FoundationMascotas() {
             visible: true,
           });
           updateMascota(editingId, { ...publishData, ...apiPet });
+          setApiMascotas((current) =>
+            current?.map((pet) => (pet.id === editingId ? { ...pet, ...apiPet } : pet)) ?? current
+          );
           showToast("¡Mascota publicada exitosamente en el catálogo!", "success");
         } catch (apiErr) {
           console.warn("Aviso API update, respaldo local:", apiErr);
           updateMascota(editingId, publishData);
+          setApiMascotas((current) =>
+            current?.map((pet) => (pet.id === editingId ? { ...pet, ...publishData } : pet)) ?? current
+          );
           showToast("Mascota publicada localmente", "success");
         }
       } else if (token && !editingId) {
@@ -380,6 +440,10 @@ export function FoundationMascotas() {
             ...apiPet,
             fundacionId: apiPet.fundacionId || fundacionId,
           });
+          setApiMascotas((current) => [
+            apiPet,
+            ...(current || []).filter((pet) => pet.id !== apiPet.id),
+          ]);
           showToast("¡Mascota registrada y publicada en catálogo!", "success");
         } catch (apiErr) {
           console.warn("Aviso API create, respaldo local:", apiErr);
@@ -418,9 +482,24 @@ export function FoundationMascotas() {
     }
   };
 
-  const toggleVisibility = (id: number, currentVisible: boolean) => {
-    updateMascota(id, { visible: !currentVisible });
-    showToast(`Mascota ${currentVisible ? "ocultada" : "mostrada"} en el catálogo`);
+  const toggleVisibility = async (pet: Pet) => {
+    const visible = pet.visible === false;
+    if (apiFundacionId != null && apiMascotas?.some((apiPet) => apiPet.id === pet.id)) {
+      try {
+        const updatedPet = await updateMascotaApi(pet.id, { visible });
+        setApiMascotas((current) =>
+          current?.map((apiPet) => (apiPet.id === pet.id ? { ...apiPet, ...updatedPet } : apiPet)) ?? current
+        );
+        updateMascota(pet.id, { visible });
+      } catch (error) {
+        console.error("Error al actualizar la visibilidad de la mascota:", error);
+        showToast("No se pudo actualizar la visibilidad de la mascota.", "error");
+        return;
+      }
+    } else {
+      updateMascota(pet.id, { visible });
+    }
+    showToast(`Mascota ${visible ? "mostrada" : "ocultada"} en el catálogo`);
   };
 
   return (
@@ -492,8 +571,25 @@ export function FoundationMascotas() {
         </div>
 
         {/* Cuadrícula de Mascotas */}
+        {mascotasLoadError && (
+          <div role="alert" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-rose-50 border border-rose-200 rounded-xl p-4 text-sm text-rose-800">
+            <p>No se pudieron cargar las mascotas desde el servidor: {mascotasLoadError}</p>
+            <button
+              type="button"
+              onClick={() => void reloadMascotas()}
+              className="px-4 py-2 rounded-lg bg-white border border-rose-200 font-semibold hover:bg-rose-100 transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+        {isLoadingMascotas && (
+          <p role="status" className="text-center text-sm text-gray-500 py-8">
+            Cargando mascotas de la fundación...
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredMascotas.map((mascota) => {
+          {!isLoadingMascotas && filteredMascotas.map((mascota) => {
             const isDraft = mascota.status === 'BORRADOR';
             const missing = isDraft ? getMissingDraftFields(mascota) : [];
 
@@ -508,7 +604,7 @@ export function FoundationMascotas() {
               >
                 <div>
                   {/* Foto o Placeholder */}
-                  <div className="h-44 overflow-hidden relative bg-gray-100 flex items-center justify-center">
+                  <div className="h-64 overflow-hidden relative bg-gray-100 flex items-center justify-center">
                     {mascota.imagen ? (
                       <img src={mascota.imagen} alt={mascota.nombre} className="w-full h-full object-cover" />
                     ) : (
@@ -517,11 +613,13 @@ export function FoundationMascotas() {
                         <span className="text-xs font-semibold text-gray-500">Sin foto asignada</span>
                       </div>
                     )}
-                    <div className="absolute top-2 right-2">
-                      <span className={`px-2.5 py-1 rounded-full text-xs ${statusBadgeClass[mascota.status] || "bg-gray-100 text-gray-600"}`}>
-                        {statusLabel[mascota.status] || mascota.status}
-                      </span>
-                    </div>
+                    {mascota.status !== "REQUIERE_PADRINOS" && (
+                      <div className="absolute top-2 right-2">
+                        <span className={`px-2.5 py-1 rounded-full text-xs ${statusBadgeClass[mascota.status] || "bg-gray-100 text-gray-600"}`}>
+                          {statusLabel[mascota.status] || mascota.status}
+                        </span>
+                      </div>
+                    )}
 
                     {isDraft && (
                       <div className="absolute top-2 left-2">
@@ -577,13 +675,8 @@ export function FoundationMascotas() {
                           Salud al día
                         </span>
                       )}
-                      {mascota.enfermedades && (
+                      {mascota.enfermedades && mascota.enfermedades.trim().toLowerCase() !== "ninguna" && (
                         <span className="px-2 py-0.5 bg-[#004955]/10 text-[#004955] rounded text-[10px] font-medium">{mascota.enfermedades}</span>
-                      )}
-                      {mascota.peso > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/80 rounded text-[10px] font-medium">
-                          <Lock size={10} /> {mascota.peso} kg (Privado)
-                        </span>
                       )}
                     </div>
                   </div>
@@ -604,7 +697,7 @@ export function FoundationMascotas() {
                     </button>
                     {!isDraft && (
                       <button
-                        onClick={() => toggleVisibility(mascota.id, mascota.visible !== false)}
+                        onClick={() => void toggleVisibility(mascota)}
                         className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                           mascota.visible !== false
                             ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -621,7 +714,7 @@ export function FoundationMascotas() {
           })}
         </div>
 
-        {filteredMascotas.length === 0 && (
+        {!isLoadingMascotas && filteredMascotas.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-gray-200/70 p-8">
             <PawPrint size={48} className="text-gray-300 mx-auto mb-3" />
             <h3 className="text-base font-bold text-gray-700">No se encontraron mascotas</h3>
@@ -636,7 +729,7 @@ export function FoundationMascotas() {
 
       {/* Modal de Registro / Edición con Wizard de 3 Pasos */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center sm:p-4" onClick={() => { if (!isUploadingImage) setShowModal(false); }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {/* Header del Modal */}
             <div className="flex-shrink-0 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
@@ -830,8 +923,8 @@ export function FoundationMascotas() {
                       Foto Principal {formErrors.imagen && <span className="text-rose-500 lowercase font-normal">(* Requerida para publicar)</span>}
                     </label>
 
-                    <div className="flex flex-col sm:flex-row gap-4 items-center">
-                      <div className="relative w-full sm:w-40 h-36 rounded-xl overflow-hidden border-2 border-dashed flex items-center justify-center bg-gray-50 flex-shrink-0">
+                    <div className="space-y-3">
+                      <div className="relative w-full max-w-sm aspect-[1/0.85] mx-auto rounded-xl overflow-hidden border-2 border-dashed flex items-center justify-center bg-gray-50">
                         {form.imagen ? (
                           <img src={form.imagen} alt="Vista previa" className="w-full h-full object-cover" />
                         ) : (
@@ -842,65 +935,29 @@ export function FoundationMascotas() {
                         )}
                       </div>
 
-                      <div className="flex-1 w-full space-y-2">
+                      <div className="w-full space-y-1.5">
                         <input
                           type="file"
                           ref={fileInputRef}
                           onChange={handleFileUpload}
                           accept="image/*"
+                          disabled={isUploadingImage}
                           className="hidden"
                         />
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-[#004955] rounded-xl text-xs font-semibold transition-colors border border-gray-200 cursor-pointer"
+                          disabled={isUploadingImage}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-[#004955] rounded-xl text-sm font-semibold transition-colors border border-gray-200 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
                         >
                           <Upload size={14} />
-                          Subir foto desde este equipo
+                          {isUploadingImage ? "Subiendo imagen..." : "Subir foto desde este equipo"}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowImagePicker(!showImagePicker)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-[#004955] rounded-xl text-xs font-semibold transition-colors border border-gray-200 cursor-pointer"
-                        >
-                          <Camera size={14} />
-                          Elegir imagen de muestra
-                        </button>
-                        <input
-                          type="url"
-                          placeholder="O pega aquí una URL directa..."
-                          value={imageUrlInput}
-                          onChange={(e) => handleImageUrlChange(e.target.value)}
-                          className={`${INPUT_CLASS} text-xs py-1.5`}
-                        />
+                        <p className="text-center text-[10px] text-gray-400">Tamaño máximo: 10 MB por imagen.</p>
                       </div>
                     </div>
 
                     {formErrors.imagen && <p className="text-rose-500 text-xs mt-1.5 font-medium">{formErrors.imagen}</p>}
-
-                    {showImagePicker && (
-                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-200 mt-2">
-                        <p className="text-xs font-medium text-gray-500 mb-2">Selecciona una imagen de muestra:</p>
-                        <div className="grid grid-cols-5 gap-2">
-                          {IMAGENES_MOCK.map((img, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => {
-                                setForm({ ...form, imagen: img });
-                                clearFieldError("imagen");
-                                setShowImagePicker(false);
-                              }}
-                              className={`w-full aspect-square rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
-                                form.imagen === img ? "border-[#07c4e1] ring-2 ring-[#07c4e1]/30" : "border-transparent hover:border-gray-300"
-                              }`}
-                            >
-                              <img src={img} alt={`Muestra ${i + 1}`} className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Descripción Corta */}
@@ -1041,8 +1098,9 @@ export function FoundationMascotas() {
                 {step > 1 ? (
                   <button
                     type="button"
+                    disabled={isUploadingImage}
                     onClick={handlePrevStep}
-                    className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ArrowLeft size={14} />
                     Anterior
@@ -1050,8 +1108,9 @@ export function FoundationMascotas() {
                 ) : (
                   <button
                     type="button"
+                    disabled={isUploadingImage}
                     onClick={() => setShowModal(false)}
-                    className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancelar
                   </button>
@@ -1062,7 +1121,7 @@ export function FoundationMascotas() {
                 {/* Botón Guardar Borrador (Siempre accesible) */}
                 <button
                   type="button"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploadingImage}
                   onClick={handleSaveDraft}
                   className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   title="Guarda el avance con lo que lleves completado"
@@ -1075,8 +1134,9 @@ export function FoundationMascotas() {
                 {step < 3 ? (
                   <button
                     type="button"
+                    disabled={isUploadingImage}
                     onClick={handleNextStep}
-                    className="flex-1 sm:flex-none px-5 py-2.5 bg-[#004955] hover:bg-[#00626d] text-white rounded-xl text-xs font-extrabold transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 sm:flex-none px-5 py-2.5 bg-[#004955] hover:bg-[#00626d] text-white rounded-xl text-xs font-extrabold transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Siguiente
                     <ArrowRight size={14} />
@@ -1084,7 +1144,7 @@ export function FoundationMascotas() {
                 ) : (
                   <button
                     type="button"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isUploadingImage}
                     onClick={handlePublish}
                     className="flex-1 sm:flex-none px-5 py-2.5 bg-[#07c4e1] hover:bg-[#06aec8] disabled:opacity-50 text-[#004955] rounded-xl text-xs font-extrabold transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                   >

@@ -1,5 +1,6 @@
 // src/app/api/mascotas.api.ts
 import { apiFetch } from "../lib/api";
+import { GLOBALCONFIG } from "../lib/config";
 import type { Pet } from "../lib/types";
 
 export interface ApiAnimal {
@@ -54,6 +55,20 @@ export interface MascotasPaginatedResult {
   totalPages: number;
   page: number;
   limit: number;
+}
+
+export const MAX_UPLOAD_IMAGE_SIZE = 10 * 1024 * 1024;
+
+interface UploadFileResponse {
+  fotos?: string[];
+  url?: string;
+  fileUrl?: string;
+  imageUrl?: string;
+  result?: string | {
+    url?: string;
+    fileUrl?: string;
+    imageUrl?: string;
+  };
 }
 
 const DEFAULT_ANIMAL_IMAGE =
@@ -169,13 +184,61 @@ export async function getMascotasByFundacionApi(
   limit = 100,
   page = 1
 ): Promise<Pet[]> {
-  const response = await apiFetch<GetMascotasResponse>(
+  const firstPage = await apiFetch<GetMascotasResponse>(
     `/animal/app/fundacion/${fundacionId}?limit=${limit}&page=${page}`,
     {
       method: "GET",
     }
   );
-  return (response.result || []).map(mapApiAnimalToFrontend);
+
+  const remainingPages = Array.from(
+    { length: Math.max(0, (firstPage.totalPages || 1) - 1) },
+    (_, index) => page + index + 1
+  );
+  const remainingResults = await Promise.all(
+    remainingPages.map((currentPage) =>
+      apiFetch<GetMascotasResponse>(
+        `/animal/app/fundacion/${fundacionId}?limit=${limit}&page=${currentPage}`,
+        { method: "GET" }
+      )
+    )
+  );
+
+  return [firstPage, ...remainingResults].flatMap((response) =>
+    (response.result || []).map(mapApiAnimalToFrontend)
+  );
+}
+
+/**
+ * POST /otros/uploadFile
+ * Sube un archivo y devuelve su URL pública.
+ */
+export async function uploadFileApi(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("El archivo seleccionado no es una imagen válida.");
+  }
+  if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
+    throw new Error("La imagen no puede superar los 10 MB.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiFetch<UploadFileResponse>("/otros/uploadFile", {
+    method: "POST",
+    body: formData,
+  });
+  const uploadedUrl = typeof response?.result === "string"
+    ? response.result
+    : response?.result && typeof response.result === "object"
+      ? response.result.url || response.result.fileUrl || response.result.imageUrl
+      : response?.fotos?.[0] || response?.url || response?.fileUrl || response?.imageUrl;
+
+  if (!uploadedUrl) {
+    throw new Error("El servidor no devolvió la URL de la imagen subida.");
+  }
+
+  return new URL(uploadedUrl, GLOBALCONFIG.EndpointBackHost).toString();
 }
 
 /**
@@ -240,4 +303,3 @@ export async function deleteMascotaApi(animalId: number | string): Promise<{ men
     method: "DELETE",
   });
 }
-
