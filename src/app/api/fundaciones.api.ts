@@ -33,6 +33,76 @@ export interface SolicitudResponse {
   mensaje: string;
   result: Solicitud;
 }
+
+export interface SolicitudFundacionAdmin {
+  id: string;
+  fundacionNombre: string;
+  ruc: string;
+  correo: string;
+  representanteLegal: string;
+  telefono: string;
+  direccion: string;
+  ubicacion: string;
+  fechaSolicitud: string;
+  estado: "Pendiente" | "Aprobada" | "Rechazada";
+  motivoRechazo?: string;
+  documentosUrls: string[];
+}
+
+interface SolicitudesResponse {
+  totalPages: number;
+  result: Solicitud[];
+}
+
+function mapSolicitud(solicitud: Solicitud): SolicitudFundacionAdmin {
+  const estado = solicitud.estado.toLowerCase();
+  return {
+    id: String(solicitud.id),
+    fundacionNombre: solicitud.nombre,
+    ruc: solicitud.ruc,
+    correo: solicitud.email_contacto,
+    representanteLegal: `${solicitud.nombre_contacto} ${solicitud.apellido_contacto}`.trim(),
+    telefono: solicitud.telefono,
+    direccion: solicitud.direccion,
+    ubicacion: solicitud.direccion,
+    fechaSolicitud: solicitud.createdAt.split("T")[0],
+    estado: estado === "aprobada" ? "Aprobada" : estado === "rechazada" ? "Rechazada" : "Pendiente",
+    motivoRechazo: solicitud.notas_admin,
+    documentosUrls: [],
+  };
+}
+
+export async function getSolicitudesFundacionApi(): Promise<SolicitudFundacionAdmin[]> {
+  const all: SolicitudFundacionAdmin[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const response = await apiFetch<SolicitudesResponse>(`/admin/solicitudes?limit=100&page=${page}`, {
+      method: "GET",
+    });
+    all.push(...response.result.map(mapSolicitud));
+    totalPages = response.totalPages;
+    page += 1;
+  } while (page <= totalPages);
+  return all;
+}
+
+interface SolicitudActionResponse {
+  mensaje: string;
+}
+
+export async function aprobarSolicitudFundacionApi(id: string): Promise<string> {
+  const response = await apiFetch<SolicitudActionResponse>(`/admin/solicitudes/${id}/aprobar`, { method: "PUT" });
+  return response.mensaje;
+}
+
+export async function rechazarSolicitudFundacionApi(id: string, notas_admin: string): Promise<string> {
+  const response = await apiFetch<SolicitudActionResponse>(`/admin/solicitudes/${id}/rechazar`, {
+    method: "PUT",
+    body: JSON.stringify({ notas_admin }),
+  });
+  return response.mensaje;
+}
 /**
  * POST /public/solicitudes
  * Crea una nueva solicitud para registrar una fundación
@@ -144,4 +214,42 @@ export async function getFundacionesApi(limit = 100, page = 1): Promise<Fundacio
     method: "GET",
   });
   return (response.result || []).map(mapApiFundacionToFrontend);
+}
+
+export interface PadrinoFundacion {
+  id: string;
+  animalId: number;
+  manadaId: number;
+  mascotaNombre: string;
+  donadorNombre: string;
+  manadaNombre: string;
+  montoMensual: number;
+  estado: "activo" | "pausado";
+  fechaInicio?: string;
+}
+
+export async function getPadrinosFundacionApi(fundacionId: string | number): Promise<PadrinoFundacion[]> {
+  const response = await apiFetch<{ result: Array<{
+    id: string;
+    animalId: number;
+    manadaId: number;
+    nombre: string;
+    padrinoNombre: string;
+    padrinoApellido: string;
+    manadaNombre: string;
+    montoMensual: number;
+    estado: "activo" | "pausado";
+    fechaInicio?: string;
+  }> }>(`/fundacion/padrinos/${fundacionId}?limit=100&page=1`, { method: "GET" });
+  return response.result.map((padrino) => ({
+    id: padrino.id,
+    animalId: padrino.animalId,
+    manadaId: padrino.manadaId,
+    mascotaNombre: padrino.nombre,
+    donadorNombre: [padrino.padrinoNombre, padrino.padrinoApellido].filter(Boolean).join(" "),
+    manadaNombre: padrino.manadaNombre,
+    montoMensual: Number(padrino.montoMensual),
+    estado: padrino.estado,
+    fechaInicio: padrino.fechaInicio,
+  }));
 }

@@ -1,26 +1,64 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Trash2, Heart, CreditCard, Lock, CheckCircle2, Edit3, Users, PieChart } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
 import { useAuth } from '../context/AuthContext';
-import { useSubscriptions } from '../context/SubscriptionContext';
 import { AuthModal } from '../components/AuthModal';
 import { PayPalCheckout } from '../components/PayPalCheckout';
 import { COMISION_PLATAFORMA } from '../lib/pagos';
-import { createManadaApi, addAnimalsToManadaApi } from '../api/manada.api';
+import { addAnimalsToManadaApi, createManadaApi, getManadasApi } from '../api/manada.api';
+import { crearEnlaceDonacionApi, getPayPalAvailabilityApi } from '../api/donaciones.api';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function ConfigurarManada() {
   const { mascotas, removeFromManada, montoGlobal, setMontoGlobal, clearManada, nombre, setNombre } = useManada();
-  const { isAuthenticated, user } = useAuth();
-  const { addSubscription } = useSubscriptions();
+  const { isAuthenticated } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPayPal, setShowPayPal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [completedMascotas, setCompletedMascotas] = useState<string[]>([]);
+  const paymentReturnProcessed = useRef(false);
+
+  useEffect(() => {
+    if (paymentReturnProcessed.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("status");
+    const manadaId = params.get("manadaId");
+    if (paymentStatus === "cancelled") {
+      paymentReturnProcessed.current = true;
+      setPaymentMessage("El pago fue cancelado en PayPal; no se activó el apadrinamiento.");
+      return;
+    }
+    if (paymentStatus !== "approved" || !manadaId) return;
+    paymentReturnProcessed.current = true;
+
+    let active = true;
+    const confirmPayment = async () => {
+      try {
+        const response = await getManadasApi({ page: 1, limit: 100 });
+        const manada = response.result.find((item) => String(item.id) === manadaId);
+        if (!active) return;
+        if (manada?.statusSubscription) {
+          setCompletedMascotas(mascotas.map((mascota) => mascota.nombre));
+          setIsSuccess(true);
+          clearManada();
+        } else {
+          setPaymentMessage("PayPal recibió la aprobación. El apadrinamiento quedará pendiente hasta que el servidor confirme el evento de pago.");
+        }
+      } catch (error) {
+        if (active) {
+          setPaymentMessage(error instanceof Error ? error.message : "No se pudo confirmar el estado del pago.");
+        }
+      }
+    };
+    void confirmPayment();
+    return () => { active = false; };
+  }, [clearManada, mascotas]);
 
   const mascotasCount = mascotas.length;
   const montoPorMascota = mascotasCount > 0 ? round2(montoGlobal / mascotasCount) : 0;
@@ -41,42 +79,19 @@ export function ConfigurarManada() {
     setShowPayPal(true);
   };
 
-  const handlePaymentSuccess = async () => {
-    const token = localStorage.getItem("leopet_token");
-    let backendManadaId: number | null = null;
-    if (token) {
-      try {
-        const res = await createManadaApi({ nombre, monto: montoGlobal });
-        if (res?.manada?.id) {
-          backendManadaId = res.manada.id;
-          const animalIds = mascotas
-            .map((m) => Number(m.animalId))
-            .filter((id) => !isNaN(id) && id > 0);
-          if (animalIds.length > 0) {
-            await addAnimalsToManadaApi(backendManadaId, animalIds);
-          }
-        }
-      } catch (err) {
-        console.warn("No se pudo sincronizar la manada con el backend, continuando con suscripción local:", err);
-      }
+  const handleStartPayment = async () => {
+    const paypal = await getPayPalAvailabilityApi();
+    if (!paypal.available) {
+      throw new Error(paypal.message || "El pago con PayPal no está disponible.");
     }
-
-    addSubscription({
-      id: `sub-${Date.now()}`,
-      userId: user?.id || "user-1",
-      manadaId: backendManadaId ? String(backendManadaId) : "mi-manada",
-      nombre,
-      pets: mascotas.map((a) => ({ petId: a.animalId, name: a.nombre || "", monthlyAmount: montoPorMascota, image: a.imagenUrl || "" })),
-      montoMensual: montoGlobal,
-      comision,
-      subtotalNeto,
-      totalMonthly: montoGlobal,
-      status: "active",
-      createdAt: new Date().toISOString(),
-    });
-    clearManada();
-    setIsSuccess(true);
-    setShowPayPal(false);
+    const animalIds = mascotas.map((mascota) => Number(mascota.animalId));
+    if (animalIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+      throw new Error("No se pudo identificar una de las mascotas de la manada. Vuelve al catálogo y agrégala nuevamente.");
+    }
+    const { manada } = await createManadaApi({ nombre, monto: montoGlobal });
+    await addAnimalsToManadaApi(manada.id, animalIds);
+    const approvalUrl = await crearEnlaceDonacionApi(manada.id);
+    window.location.assign(approvalUrl);
   };
 
   if (isSuccess) {
@@ -90,7 +105,7 @@ export function ConfigurarManada() {
           <p className="text-[#3e494a] text-base leading-relaxed">
             Gracias por convertirte en padrino. Has iniciado el apadrinamiento para{" "}
             <span className="font-semibold text-[#004955]">
-              {mascotas.map((a) => a.nombre).join(", ")}
+              {completedMascotas.join(", ")}
             </span>. Tu aporte de <span className="font-semibold text-[#004955]">${montoGlobal.toFixed(2)}/mes</span> se reparte de forma equitativa. Recibirás reportes mensuales del progreso y salud.
           </p>
           <div className="pt-4 flex flex-col gap-3">
@@ -120,6 +135,12 @@ export function ConfigurarManada() {
           Define el monto mensual de tu manada; se reparte equitativamente entre las mascotas apadrinadas.
         </p>
       </div>
+
+      {paymentMessage && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+          {paymentMessage}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-7 space-y-4">
@@ -301,13 +322,13 @@ export function ConfigurarManada() {
 
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <Lock size={14} className="text-[#00626d]" />
-              <span>Pago procesado de forma segura vía PayPal Sandbox</span>
+              <span>La suscripción se activa solo cuando el servidor confirma el pago con PayPal.</span>
             </div>
 
             {showPayPal ? (
               <PayPalCheckout
                 amount={montoGlobal}
-                onSuccess={handlePaymentSuccess}
+                onCheckout={handleStartPayment}
                 onCancel={() => setShowPayPal(false)}
               />
             ) : (

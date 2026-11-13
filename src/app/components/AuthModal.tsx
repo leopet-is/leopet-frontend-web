@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { X, Mail, Lock, User, Heart, IdCard, Eye, EyeOff, Phone } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, type AuthUser } from "../context/AuthContext";
 import isEmail from "validator/lib/isEmail";
 import { esCedulaValida, esTelefonoEcuador } from '../lib/validators';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (user: AuthUser) => void;
 }
 
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
@@ -95,10 +95,11 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     setIsSubmitting(true);
 
     try {
+      let authenticatedUser: AuthUser;
       if (mode === "login") {
-        await login(email, password );
+        authenticatedUser = await login(email, password);
       } else {
-        await register(
+        authenticatedUser = await register(
           nombre,
           apellido,
           email,
@@ -108,7 +109,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         );
       }
 
-      onSuccess?.();
+      onSuccess?.(authenticatedUser);
       onClose();
       resetForm();
     } catch (error: unknown) {

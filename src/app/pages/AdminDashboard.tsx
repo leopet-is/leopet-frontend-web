@@ -81,7 +81,7 @@ export function AdminDashboard() {
                 <div className="bg-[#004955]/10 p-2 rounded-lg"><Users size={18} className="text-[#004955]" /></div>
                 <div className="flex-1">
                   <p className="text-[#004955] font-medium text-sm">Control de Usuarios</p>
-                  <p className="text-gray-500 text-xs">{usuarios.length} cuentas registradas · {usuarios.filter(u => u.sesionActiva).length} en línea</p>
+                  <p className="text-gray-500 text-xs">{usuarios.length} cuentas registradas</p>
                 </div>
                 <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
               </Link>

@@ -64,7 +64,6 @@ export interface User {
   fundacionNombre?: string;
   estaActivo?: boolean;
   estatus: "ACTIVO" | "INACTIVO" | "BLOQUEADO" | "PENDIENTE_ACTIVACION";
-  sesionActiva?: boolean;
   createdAt?: string;
 }
 

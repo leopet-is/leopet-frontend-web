@@ -10,11 +10,11 @@ export function FoundationLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
-  const { advertencias } = useFoundation();
+  const { advertencias, advertenciasAvailable } = useFoundation();
   const { fundaciones } = useAdmin();
   const { pagos } = usePagos();
 
-  const fundacionId = user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03";
+  const fundacionId = user?.fundacionId ? String(user.fundacionId) : "";
   const deshabilitada = fundaciones.find((f) => f.id === fundacionId)?.estado === "Deshabilitada";
 
   if (!isAuthenticated || user?.rol !== "fundacion") {
@@ -60,7 +60,7 @@ export function FoundationLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const pendientes = advertencias.filter((a) => a.estado === "pendiente").length;
+  const pendientes = advertenciasAvailable ? advertencias.filter((a) => a.estado === "pendiente").length : undefined;
   const pagosPendientes = pagos.filter(
     (p) => p.fundacionId === fundacionId && (p.estado === "pendiente_desembolso" || p.estado === "apelada" || p.estado === "mediada")
   ).length;

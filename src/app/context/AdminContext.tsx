@@ -1,17 +1,27 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { storage } from "../lib/storage";
-import { MOCK_SOLICITUDES } from "../../data/mockSolicitudes";
 import { MOCK_DENUNCIAS } from "../../data/mockDenuncias";
 import { MOCK_FUNDACIONES } from "../../data/mockFundaciones";
 import type { User } from "../lib/types";
 import { getUsuariosApi, updateUsuarioEstadoApi } from "../api/usuarios.api";
+import {
+  aprobarSolicitudFundacionApi,
+  getSolicitudesFundacionApi,
+  rechazarSolicitudFundacionApi,
+  type SolicitudFundacionAdmin,
+} from "../api/fundaciones.api";
 
 
 type Denuncia = typeof MOCK_DENUNCIAS[0];
 type Fundacion = typeof MOCK_FUNDACIONES[0];
 
 interface AdminContextType {
-  solicitudes: typeof MOCK_SOLICITUDES;
+  solicitudes: SolicitudFundacionAdmin[];
+  isLoadingSolicitudes: boolean;
+  errorSolicitudes: string | null;
+  fetchSolicitudes: () => Promise<void>;
+  aprobarSolicitud: (id: string) => Promise<string>;
+  rechazarSolicitud: (id: string, motivo: string) => Promise<string>;
   denuncias: Denuncia[];
   fundaciones: Fundacion[];
   usuarios: User[];
@@ -20,11 +30,7 @@ interface AdminContextType {
   fetchUsuarios: () => Promise<void>;
   toggleUserStatus: (id: string) => Promise<void>;
   setUserEstatus: (id: string, nuevoEstatus: User["estatus"]) => Promise<void>;
-  revokeUserSession: (id: string) => void;
-  toggleUserSession: (id: string) => void;
   updateUsuario: (id: string, updates: Partial<User>) => void;
-  addSolicitud: (sol: typeof MOCK_SOLICITUDES[0]) => void;
-  updateSolicitud: (id: string, updates: Partial<typeof MOCK_SOLICITUDES[0]>) => void;
   addDenuncia: (data: Omit<Denuncia, "id" | "ticket" | "estado" | "fecha" | "auditoria" | "createdAt" | "updatedAt">) => Denuncia;
   updateDenuncia: (id: number, updates: Partial<Denuncia>) => void;
   updateFundacion: (id: string, updates: Partial<Fundacion>) => void;
@@ -59,6 +65,42 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const [solicitudes, setSolicitudes] = useState<SolicitudFundacionAdmin[]>([]);
+  const [isLoadingSolicitudes, setIsLoadingSolicitudes] = useState(true);
+  const [errorSolicitudes, setErrorSolicitudes] = useState<string | null>(null);
+
+  const fetchSolicitudes = useCallback(async () => {
+    if (!storage.getToken()) {
+      setIsLoadingSolicitudes(false);
+      return;
+    }
+    setIsLoadingSolicitudes(true);
+    setErrorSolicitudes(null);
+    try {
+      setSolicitudes(await getSolicitudesFundacionApi());
+    } catch (err) {
+      setErrorSolicitudes(err instanceof Error ? err.message : "No se pudieron cargar las solicitudes");
+    } finally {
+      setIsLoadingSolicitudes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSolicitudes();
+  }, [fetchSolicitudes]);
+
+  const aprobarSolicitud = useCallback(async (id: string) => {
+    const message = await aprobarSolicitudFundacionApi(id);
+    await fetchSolicitudes();
+    return message;
+  }, [fetchSolicitudes]);
+
+  const rechazarSolicitud = useCallback(async (id: string, motivo: string) => {
+    const message = await rechazarSolicitudFundacionApi(id, motivo);
+    await fetchSolicitudes();
+    return message;
+  }, [fetchSolicitudes]);
+
   useEffect(() => {
     fetchUsuarios();
   }, [fetchUsuarios]);
@@ -79,7 +121,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             ...u,
             estatus: nuevoEstatus,
             estaActivo: !actualmenteActivo,
-            sesionActiva: !actualmenteActivo ? u.sesionActiva : false,
           };
         }
         return u;
@@ -100,32 +141,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             ...u,
             estatus: nuevoEstatus,
             estaActivo: isActivo,
-            sesionActiva: isActivo ? u.sesionActiva : false,
           };
-        }
-        return u;
-      });
-      storage.setUserList(updated);
-      return updated;
-    });
-  }, []);
-
-  const revokeUserSession = useCallback((id: string) => {
-    setUsuarios((prev) => {
-      const updated = prev.map((u) =>
-        u.id === id ? { ...u, sesionActiva: false } : u
-      );
-      storage.setUserList(updated);
-      return updated;
-    });
-  }, []);
-
-  const toggleUserSession = useCallback((id: string) => {
-    setUsuarios((prev) => {
-      const updated = prev.map((u) => {
-        if (u.id === id) {
-          const nuevaSesion = !u.sesionActiva;
-          return { ...u, sesionActiva: nuevaSesion };
         }
         return u;
       });
@@ -142,11 +158,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const [solicitudes, setSolicitudes] = useState(() => {
-    const stored = storage.getSolicitudes();
-    return stored.length > 0 ? stored : MOCK_SOLICITUDES;
-  });
-
   const [denuncias, setDenuncias] = useState<Denuncia[]>(() => {
     const stored = storage.getDenuncias();
     return stored.length > 0 ? stored : MOCK_DENUNCIAS;
@@ -156,22 +167,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const stored = storage.getFundaciones();
     return stored.length > 0 ? stored : MOCK_FUNDACIONES;
   });
-
-  const addSolicitud = useCallback((sol: typeof MOCK_SOLICITUDES[0]) => {
-    setSolicitudes((prev) => {
-      const updated = [sol, ...prev];
-      storage.setSolicitudes(updated);
-      return updated;
-    });
-  }, []);
-
-  const updateSolicitud = useCallback((id: string, updates: Partial<typeof MOCK_SOLICITUDES[0]>) => {
-    setSolicitudes((prev) => {
-      const updated = prev.map((s) => (s.id === id ? { ...s, ...updates } : s));
-      storage.setSolicitudes(updated);
-      return updated;
-    });
-  }, []);
 
   const addDenuncia = useCallback<AdminContextType["addDenuncia"]>(
     (data) => {
@@ -221,6 +216,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     <AdminContext.Provider
       value={{
         solicitudes,
+        isLoadingSolicitudes,
+        errorSolicitudes,
+        fetchSolicitudes,
+        aprobarSolicitud,
+        rechazarSolicitud,
         denuncias,
         fundaciones,
         usuarios,
@@ -229,11 +229,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         fetchUsuarios,
         toggleUserStatus,
         setUserEstatus,
-        revokeUserSession,
-        toggleUserSession,
         updateUsuario,
-        addSolicitud,
-        updateSolicitud,
         addDenuncia,
         updateDenuncia,
         updateFundacion,

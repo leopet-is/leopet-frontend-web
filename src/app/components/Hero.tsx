@@ -31,13 +31,13 @@ export function Hero() {
             Conoce los casos de diversas fundaciones
           </p>
           
-          <button className="bg-[#07c4e1] text-[#004955] px-6 sm:px-8 lg:px-12 py-3 lg:py-4 rounded-full font-medium text-base sm:text-xl lg:text-[24px] flex items-center gap-3 lg:gap-4 hover:bg-[#06aec8] transition-colors ml-auto">
+          <a href="#registro" className="bg-[#07c4e1] text-[#004955] px-6 sm:px-8 lg:px-12 py-3 lg:py-4 rounded-full font-medium text-base sm:text-xl lg:text-[24px] flex items-center gap-3 lg:gap-4 hover:bg-[#06aec8] transition-colors ml-auto">
             <span className="hidden sm:inline">¿Tienes una fundación?</span>
             <span className="sm:hidden">¿Eres fundación?</span>
             <svg width="31" height="15" viewBox="0 0 31 15" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M23.425 1.5L29.425 7.5L23.425 13.5M1.425 7.5H29.425" stroke="#004955" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          </button>
+          </a>
         </motion.div>
       </div>
 
