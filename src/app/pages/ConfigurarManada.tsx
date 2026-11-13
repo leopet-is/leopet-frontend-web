@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, Trash2, Heart, CreditCard, Lock, CheckCircle2, Edit3, Users, PieChart } from 'lucide-react';
+import { toast } from 'sonner';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +9,7 @@ import { useSubscriptions } from '../context/SubscriptionContext';
 import { AuthModal } from '../components/AuthModal';
 import { PayPalCheckout } from '../components/PayPalCheckout';
 import { COMISION_PLATAFORMA } from '../lib/pagos';
+import { createManadaApi, addAnimalsToManadaApi } from '../api/manada.api';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -29,6 +31,10 @@ export function ConfigurarManada() {
   const netoPorMascota = round2(montoPorMascota - comisionPorMascota);
 
   const handleConfirm = () => {
+    if (mascotasCount === 0) {
+      toast.error("Debes agregar al menos una mascota a tu manada para continuar.");
+      return;
+    }
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
@@ -36,11 +42,30 @@ export function ConfigurarManada() {
     setShowPayPal(true);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
+    const token = localStorage.getItem("leopet_token");
+    let backendManadaId: number | null = null;
+    if (token) {
+      try {
+        const res = await createManadaApi({ nombre, monto: montoGlobal });
+        if (res?.manada?.id) {
+          backendManadaId = res.manada.id;
+          const animalIds = mascotas
+            .map((m) => Number(m.animalId))
+            .filter((id) => !isNaN(id) && id > 0);
+          if (animalIds.length > 0) {
+            await addAnimalsToManadaApi(backendManadaId, animalIds);
+          }
+        }
+      } catch (err) {
+        console.warn("No se pudo sincronizar la manada con el backend, continuando con suscripción local:", err);
+      }
+    }
+
     addSubscription({
       id: `sub-${Date.now()}`,
-      userId: "user-1",
-      manadaId: "mi-manada",
+      userId: user?.id || "user-1",
+      manadaId: backendManadaId ? String(backendManadaId) : "mi-manada",
       nombre,
       pets: mascotas.map((a) => ({ petId: a.animalId, name: a.nombre || "", monthlyAmount: montoPorMascota, image: a.imagenUrl })),
       montoMensual: montoGlobal,
@@ -224,6 +249,17 @@ export function ConfigurarManada() {
                 </div>
               </div>
             ))
+          )}
+
+          {mascotasCount > 0 && (
+            <div className="pt-2 text-center">
+              <Link
+                to="/mascotas"
+                className="inline-flex items-center gap-2 text-sm text-[#00626d] hover:text-[#004955] font-semibold hover:underline"
+              >
+                + Explorar y agregar más mascotas desde el catálogo
+              </Link>
+            </div>
           )}
         </div>
 

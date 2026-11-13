@@ -4,7 +4,7 @@ import { apiFetch } from "../lib/api";
 export interface ApiAnimal {
   id: number;
   nombre: string;
-  status: "REQUIERE_PADRINOS" | "APADRINADO" | "EN_TRATAMIENTO" | "FALLECIDO" | "INACTIVO" | string;
+  status: "BORRADOR" | "REQUIERE_PADRINOS" | "APADRINADO" | "EN_TRATAMIENTO" | "FALLECIDO" | "INACTIVO" | string;
   especie: string;
   raza?: string;
   descripcion?: string;

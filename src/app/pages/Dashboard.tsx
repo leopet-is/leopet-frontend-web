@@ -79,8 +79,15 @@ export function Dashboard() {
                 {subscriptions.slice(0, 5).map((sub) => (
                   <div key={sub.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
                     <div>
-                      <p className="text-[#004955] font-medium text-sm">{sub.pets.map((p) => p.name).join(", ")}</p>
-                      <p className="text-gray-500 text-xs">{new Date(sub.createdAt).toLocaleDateString("es-EC")}</p>
+                      <p className="text-[#004955] font-semibold text-sm">
+                        {sub.nombre || "Mi Manada"}
+                      </p>
+                      <p className="text-gray-600 text-xs font-medium">
+                        Mascotas: {sub.pets.map((p) => p.name).join(", ")}
+                      </p>
+                      <p className="text-gray-400 text-[11px]">
+                        {new Date(sub.createdAt).toLocaleDateString("es-EC")} · {sub.pets.length} mascota{sub.pets.length > 1 ? "s" : ""}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[#004955] font-bold text-sm">${sub.totalMonthly.toFixed(2)}/mes</p>

@@ -15,6 +15,7 @@ interface SubscriptionContextType {
   cancelSubscription: (subId: string) => void;
   removePetFromSubscription: (subId: string, petId: string) => void;
   updateSubscriptionAmount: (subId: string, amount: number) => void;
+  updateSubscriptionName: (subId: string, name: string) => void;
   getActiveSubscriptions: () => Subscription[];
 }
 
@@ -100,12 +101,20 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateSubscriptionName = useCallback((subId: string, name: string) => {
+    setSubscriptions((prev) => {
+      const updated = prev.map((s) => (s.id === subId ? { ...s, nombre: name } : s));
+      storage.setSubscriptions(updated);
+      return updated;
+    });
+  }, []);
+
   const getActiveSubscriptions = useCallback(() => {
     return subscriptions.filter((s) => s.status === "active");
   }, [subscriptions]);
 
   return (
-    <SubscriptionContext.Provider value={{ subscriptions, addSubscription, pauseSubscription, resumeSubscription, cancelSubscription, removePetFromSubscription, updateSubscriptionAmount, getActiveSubscriptions }}>
+    <SubscriptionContext.Provider value={{ subscriptions, addSubscription, pauseSubscription, resumeSubscription, cancelSubscription, removePetFromSubscription, updateSubscriptionAmount, updateSubscriptionName, getActiveSubscriptions }}>
       {children}
     </SubscriptionContext.Provider>
   );

@@ -2,7 +2,7 @@
  * @typedef {Object} Mascota
  * @property {number} id                     // PK auto-increment (INT)
  * @property {string} nombre                 // VARCHAR(191)
- * @property {'NO_APADRINADO' | 'APADRINADO' | 'EN_PROCESO' | 'ADOPTADO'} status // Estado de apadrinamiento
+ * @property {'BORRADOR' | 'NO_APADRINADO' | 'APADRINADO' | 'EN_PROCESO' | 'ADOPTADO' | 'REQUIERE_PADRINOS' | 'INACTIVO'} status // Estado de apadrinamiento o borrador
  * @property {string} especie                // VARCHAR(191) — Perro, Gato, etc.
  * @property {string} [raza]                 // VARCHAR(191) nullable
  * @property {string} descripcion            // VARCHAR(200) — descripción detallada

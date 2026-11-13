@@ -1,7 +1,11 @@
 export interface Pet {
   id: number;
   nombre: string;
+<<<<<<< Updated upstream
   status: "NO_APADRINADO" | "APADRINADO" | "EN_PROCESO" | "ADOPTADO";
+=======
+  status: "BORRADOR" | "NO_APADRINADO" | "APADRINADO" | "EN_PROCESO" | "ADOPTADO" | "REQUIERE_PADRINOS" | "EN_TRATAMIENTO" | "FALLECIDO" | "INACTIVO" | string;
+>>>>>>> Stashed changes
   especie: string;
   raza?: string;
   descripcion: string;
