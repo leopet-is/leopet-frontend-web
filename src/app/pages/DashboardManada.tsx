@@ -9,10 +9,12 @@ import { DashboardLayout } from './DashboardLayout';
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function DashboardManada() {
-  const { subscriptions, pauseSubscription, resumeSubscription, cancelSubscription, removePetFromSubscription, updateSubscriptionAmount } = useSubscriptions();
-  const { mascotas, removeFromManada, montoGlobal, setMontoGlobal } = useManada();
+  const { subscriptions, pauseSubscription, resumeSubscription, cancelSubscription, removePetFromSubscription, updateSubscriptionAmount, updateSubscriptionName } = useSubscriptions();
+  const { mascotas, removeFromManada, montoGlobal, setMontoGlobal, nombre } = useManada();
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
   const [editingSub, setEditingSub] = useState<{ subId: string; amount: number } | null>(null);
+  const [editingNameSubId, setEditingNameSubId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState<string>("");
 
   const shareGlobal = mascotas.length > 0 ? round2(montoGlobal / mascotas.length) : 0;
 
@@ -26,19 +28,35 @@ export function DashboardManada() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <div>
-          <h2 className="text-[#004955] text-2xl font-semibold">Gestionar Manada</h2>
-          <p className="text-[#3e494a] text-sm mt-1">
-            El monto se asigna a tu manada y se reparte equitativamente entre sus mascotas.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-[#004955] text-2xl font-semibold">Gestionar Manada</h2>
+            <p className="text-[#3e494a] text-sm mt-1">
+              El monto se asigna a tu manada y se reparte equitativamente entre sus mascotas.
+            </p>
+          </div>
+          <Link
+            to="/dashboard/manadas"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-[#004955] rounded-xl text-xs font-semibold transition-colors"
+          >
+            Ver mis grupos de manadas →
+          </Link>
         </div>
 
         {mascotas.length > 0 && (
           <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[#004955] text-lg font-semibold">Manada Pendiente de Pago</h3>
-              <Link to="/mi-manada/configurar" className="text-[#07c4e1] text-sm font-medium hover:underline">
-                Configurar →
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[#004955] text-lg font-bold">{nombre || "Mi Manada"}</h3>
+                  <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                    Pendiente de pago
+                  </span>
+                </div>
+                <p className="text-gray-500 text-xs mt-0.5">En proceso de configuración · {mascotas.length} mascota{mascotas.length > 1 ? "s" : ""}</p>
+              </div>
+              <Link to="/mi-manada/configurar" className="text-[#00626d] hover:text-[#004955] text-sm font-semibold hover:underline flex items-center gap-1">
+                Configurar y pagar →
               </Link>
             </div>
             <div className="space-y-3">
@@ -102,10 +120,57 @@ export function DashboardManada() {
                   <div key={sub.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[#004955] font-semibold">
-                          {sub.pets.map((p) => p.name).join(", ")}
+                        {editingNameSubId === sub.id ? (
+                          <div className="flex items-center gap-2 mb-1">
+                            <input
+                              type="text"
+                              value={editingNameValue}
+                              onChange={(e) => setEditingNameValue(e.target.value)}
+                              className="px-2.5 py-1 border border-[#07c4e1] rounded-lg text-sm text-[#004955] font-bold focus:ring-2 focus:ring-[#07c4e1] outline-none"
+                              autoFocus
+                              maxLength={40}
+                            />
+                            <button
+                              onClick={() => {
+                                if (editingNameValue.trim()) {
+                                  updateSubscriptionName(sub.id, editingNameValue.trim());
+                                }
+                                setEditingNameSubId(null);
+                              }}
+                              className="text-[#004955] hover:text-[#07c4e1] p-1"
+                              title="Guardar nombre"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={() => setEditingNameSubId(null)}
+                              className="text-gray-400 hover:text-gray-600 p-1"
+                              title="Cancelar"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h4 className="text-[#004955] text-lg font-bold">
+                              {sub.nombre || "Mi Manada"}
+                            </h4>
+                            <button
+                              onClick={() => {
+                                setEditingNameSubId(sub.id);
+                                setEditingNameValue(sub.nombre || "Mi Manada");
+                              }}
+                              className="text-gray-400 hover:text-[#004955] p-1 transition-colors"
+                              title="Editar nombre de la manada"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          </div>
+                        )}
+                        <p className="text-gray-600 text-xs font-medium">
+                          Mascotas: {sub.pets.map((p) => p.name).join(", ")}
                         </p>
-                        <p className="text-gray-500 text-xs">
+                        <p className="text-gray-400 text-xs">
                           Creada: {new Date(sub.createdAt).toLocaleDateString("es-EC")} · {sub.pets.length} mascota{sub.pets.length > 1 ? "s" : ""}
                         </p>
                       </div>

@@ -10,6 +10,7 @@ interface ManadaContextType {
   nombre: string;
   setNombre: (name: string) => void;
   addToManada: (animal: ManadaAnimal) => void;
+  addMultipleToManada: (animals: ManadaAnimal[]) => void;
   removeFromManada: (animalId: string) => void;
   clearManada: () => void;
   montoGlobal: number;
@@ -44,6 +45,19 @@ export function ManadaProvider({ children }: { children: ReactNode }) {
     });
   }, [montoGlobal]);
 
+  const addMultipleToManada = useCallback((animals: ManadaAnimal[]) => {
+    setMascotas((prev) => {
+      const existingIds = new Set(prev.map((a) => a.animalId));
+      const novel = animals.filter((a) => !existingIds.has(a.animalId));
+      if (novel.length === 0) return prev;
+      const combined = [...prev, ...novel];
+      const share = round2(montoGlobal / Math.max(combined.length, 1));
+      const updated = combined.map((a) => ({ ...a, montoMensual: share }));
+      storage.setManadaCart(updated);
+      return updated;
+    });
+  }, [montoGlobal]);
+
   const removeFromManada = useCallback((animalId: string) => {
     setMascotas((prev) => {
       const updated = prev.filter((a) => a.animalId !== animalId);
@@ -72,7 +86,7 @@ export function ManadaProvider({ children }: { children: ReactNode }) {
   const totalMonthly = montoGlobal;
 
   return (
-    <ManadaContext.Provider value={{ mascotas, nombre, setNombre, addToManada, removeFromManada, clearManada, montoGlobal, setMontoGlobal, totalMonthly }}>
+    <ManadaContext.Provider value={{ mascotas, nombre, setNombre, addToManada, addMultipleToManada, removeFromManada, clearManada, montoGlobal, setMontoGlobal, totalMonthly }}>
       {children}
     </ManadaContext.Provider>
   );
