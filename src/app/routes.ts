@@ -10,6 +10,7 @@ const ConfigurarManada = lazy(() => import("./pages/ConfigurarManada").then((m) 
 const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
 const DashboardEvidencias = lazy(() => import("./pages/DashboardEvidencias").then((m) => ({ default: m.DashboardEvidencias })));
 const DashboardManada = lazy(() => import("./pages/DashboardManada").then((m) => ({ default: m.DashboardManada })));
+const ManadasView = lazy(() => import("./components/ManadasView").then((m) => ({ default: m.ManadasView })));
 const DashboardDenuncias = lazy(() => import("./pages/DashboardDenuncias").then((m) => ({ default: m.DashboardDenuncias })));
 const FundacionesList = lazy(() => import("./components/FundacionesList").then((m) => ({ default: m.FundacionesList })));
 const FundacionDetail = lazy(() => import("./components/FundacionDetail").then((m) => ({ default: m.FundacionDetail })));
@@ -61,6 +62,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard/manada",
         Component: DashboardManada,
+      },
+      {
+        path: "dashboard/manadas",
+        Component: ManadasView,
       },
       {
         path: "dashboard/denuncias",

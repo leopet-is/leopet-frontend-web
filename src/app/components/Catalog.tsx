@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from "motion/react";
-import { ChevronLeft, ChevronRight, CheckCircle2, Heart, RotateCcw, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, Heart, RotateCcw, Zap, CheckSquare, Square, Layers, Check } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -33,10 +33,16 @@ function PetCard({
   pet,
   isInManada,
   onApadrinar,
+  isMultiSelectMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: {
   pet: ScoredPet;
   isInManada: boolean;
   onApadrinar: (pet: ScoredPet) => void;
+  isMultiSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (pet: ScoredPet) => void;
 }) {
   const urgent = isHighPriority(pet.score);
   const { isFavorito, toggleFavorito } = useFavoritos();
@@ -54,13 +60,50 @@ function PetCard({
   };
 
   return (
-    <div className={`bg-white rounded-[24px] overflow-hidden flex flex-col h-full group transition-shadow hover:shadow-lg border ${
-      urgent ? "border-[#004955]/30" : "border-[#b1d0d5]"
-    }`}>
+    <div
+      onClick={() => {
+        if (isMultiSelectMode && !isInManada) {
+          onToggleSelect?.(pet);
+        }
+      }}
+      className={`bg-white rounded-[24px] overflow-hidden flex flex-col h-full group transition-all hover:shadow-lg border ${
+        isSelected
+          ? "border-[#07c4e1] ring-2 ring-[#07c4e1]/50 shadow-md"
+          : urgent
+          ? "border-[#004955]/30"
+          : "border-[#b1d0d5]"
+      } ${isMultiSelectMode && !isInManada ? "cursor-pointer" : ""}`}
+    >
       <div className="relative h-[240px] overflow-hidden block">
-        <Link to={`/mascota/${pet.id}`} className="block w-full h-full">
+        <Link
+          to={`/mascota/${pet.id}`}
+          onClick={(e) => {
+            if (isMultiSelectMode) e.preventDefault();
+          }}
+          className="block w-full h-full"
+        >
           <ImageWithFallback src={pet.imagen} alt={pet.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         </Link>
+
+        {/* Multi-Select Checkbox Trigger */}
+        {isMultiSelectMode && !isInManada && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelect?.(pet);
+            }}
+            className={`absolute top-4 left-4 z-20 p-2 rounded-xl shadow-md transition-all flex items-center justify-center cursor-pointer ${
+              isSelected
+                ? "bg-[#07c4e1] text-[#004955] ring-2 ring-white"
+                : "bg-white/95 text-gray-500 hover:text-[#004955] hover:bg-white"
+            }`}
+            aria-label={isSelected ? `Deseleccionar a ${pet.nombre}` : `Seleccionar a ${pet.nombre}`}
+          >
+            {isSelected ? <CheckSquare size={20} className="stroke-[2.5]" /> : <Square size={20} />}
+          </button>
+        )}
 
         {/* Favorite Bookmark Button */}
         <button
@@ -76,7 +119,9 @@ function PetCard({
         </button>
 
         {/* Age and Urgency Badges */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 flex-wrap pointer-events-none">
+        <div className={`absolute top-4 flex items-center gap-2 flex-wrap pointer-events-none transition-all ${
+          isMultiSelectMode && !isInManada ? "left-16" : "left-4"
+        }`}>
           <span className="bg-white/90 px-4 py-1 rounded-full text-[#66949b] text-sm font-medium">
             {pet.edad} {pet.edad === 1 ? "año" : "años"}
           </span>
@@ -94,7 +139,13 @@ function PetCard({
 
       <div className="p-8 flex flex-col gap-3 flex-grow">
         <div>
-          <Link to={`/mascota/${pet.id}`} className="hover:text-[#07c4e1] transition-colors block">
+          <Link
+            to={`/mascota/${pet.id}`}
+            onClick={(e) => {
+              if (isMultiSelectMode) e.preventDefault();
+            }}
+            className="hover:text-[#07c4e1] transition-colors block"
+          >
             <h3 className="text-[#004955] text-[28px] font-bold leading-tight group-hover:text-[#00626d] transition-colors">{pet.nombre}</h3>
           </Link>
           <p className="text-[#66949b] text-[18px] font-light">{pet.raza}</p>
@@ -109,27 +160,66 @@ function PetCard({
             </span>
           )}
         </div>
-        <button
-          onClick={(e) => { e.preventDefault(); onApadrinar(pet); }}
-          className={`w-full py-3 mt-2 rounded-full text-[16px] font-medium tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            isInManada
-              ? "bg-[#07c4e1]/15 text-[#00626d] border border-[#07c4e1]/40 hover:bg-[#07c4e1]/25"
-              : "bg-[#00626d] text-[#07c4e1] hover:bg-[#004955]"
-          }`}
-          aria-label={isInManada ? `Ver a ${pet.nombre} en tu Manada` : `Apadrinar a ${pet.nombre}`}
-        >
-          {isInManada ? (
-            <>
+
+        {isMultiSelectMode ? (
+          isInManada ? (
+            <button
+              disabled
+              className="w-full py-3 mt-2 rounded-full text-[16px] font-medium tracking-wide bg-[#07c4e1]/15 text-[#00626d] border border-[#07c4e1]/40 flex items-center justify-center gap-2 cursor-default"
+            >
               <CheckCircle2 size={18} className="text-[#00626d]" />
               En tu Manada
-            </>
+            </button>
           ) : (
-            <>
-              <Heart size={18} />
-              Apadrinar
-            </>
-          )}
-        </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelect?.(pet);
+              }}
+              className={`w-full py-3 mt-2 rounded-full text-[16px] font-medium tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                isSelected
+                  ? "bg-[#07c4e1] text-[#004955] font-bold shadow-sm hover:bg-[#06aec8]"
+                  : "bg-gray-100 text-[#004955] hover:bg-gray-200 border border-gray-200"
+              }`}
+              aria-label={isSelected ? `Deseleccionar a ${pet.nombre}` : `Seleccionar a ${pet.nombre}`}
+            >
+              {isSelected ? (
+                <>
+                  <CheckSquare size={18} />
+                  Seleccionada
+                </>
+              ) : (
+                <>
+                  <Square size={18} />
+                  Seleccionar
+                </>
+              )}
+            </button>
+          )
+        ) : (
+          <button
+            onClick={(e) => { e.preventDefault(); onApadrinar(pet); }}
+            className={`w-full py-3 mt-2 rounded-full text-[16px] font-medium tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              isInManada
+                ? "bg-[#07c4e1]/15 text-[#00626d] border border-[#07c4e1]/40 hover:bg-[#07c4e1]/25"
+                : "bg-[#00626d] text-[#07c4e1] hover:bg-[#004955]"
+            }`}
+            aria-label={isInManada ? `Ver a ${pet.nombre} en tu Manada` : `Apadrinar a ${pet.nombre}`}
+          >
+            {isInManada ? (
+              <>
+                <CheckCircle2 size={18} className="text-[#00626d]" />
+                En tu Manada
+              </>
+            ) : (
+              <>
+                <Heart size={18} />
+                Apadrinar
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -189,8 +279,11 @@ function Pagination({ page, totalPages, onPageChange }: { page: number; totalPag
 export function Catalog() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { addToManada, mascotas: manadaMascotas } = useManada();
+  const { addToManada, addMultipleToManada, mascotas: manadaMascotas } = useManada();
   const foundationContext = useFoundation();
+
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedPetIds, setSelectedPetIds] = useState<Set<number>>(new Set());
 
   // Live backend data state with fallback
   const [apiPets, setApiPets] = useState<Pet[] | null>(null);
@@ -375,6 +468,70 @@ export function Catalog() {
     });
   };
 
+  const toggleSelectPet = (pet: ScoredPet) => {
+    setSelectedPetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(pet.id)) {
+        next.delete(pet.id);
+      } else {
+        next.add(pet.id);
+      }
+      return next;
+    });
+  };
+
+  const eligiblePetsInPage = paginated.filter(
+    (p) => !manadaMascotas.some((a) => a.animalId === String(p.id))
+  );
+
+  const allInPageSelected =
+    eligiblePetsInPage.length > 0 &&
+    eligiblePetsInPage.every((p) => selectedPetIds.has(p.id));
+
+  const toggleSelectAllInPage = () => {
+    setSelectedPetIds((prev) => {
+      const next = new Set(prev);
+      if (allInPageSelected) {
+        eligiblePetsInPage.forEach((p) => next.delete(p.id));
+      } else {
+        eligiblePetsInPage.forEach((p) => next.add(p.id));
+      }
+      return next;
+    });
+  };
+
+  const handleAddSelectedToManada = () => {
+    const petsToAdd = sorted.filter((p) => selectedPetIds.has(p.id));
+    if (petsToAdd.length === 0) return;
+
+    const animalsToAdd = petsToAdd.map((p) => ({
+      id: `manada-animal-${p.id}`,
+      manadaId: "temp",
+      animalId: String(p.id),
+      montoMensual: 25.0,
+      nombre: p.nombre,
+      refugioNombre: p.fundacionNombre || "",
+      etiqueta:
+        p.status === "EN_TRATAMIENTO" || isHighPriority(p.score)
+          ? "ATENCIÓN"
+          : "SALUDABLE",
+      imagenUrl: p.imagen,
+    }));
+
+    addMultipleToManada(animalsToAdd);
+
+    toast.success(`¡${petsToAdd.length} mascotas agregadas a tu Manada!`, {
+      description: "Tu aporte mensual se ha recalculado de forma equitativa.",
+      action: {
+        label: "Ver Manada",
+        onClick: () => navigate("/mi-manada/configurar"),
+      },
+    });
+
+    setSelectedPetIds(new Set());
+    setIsMultiSelectMode(false);
+  };
+
   return (
     <div className="bg-white min-h-screen pb-20">
       <div className="py-8 px-4 md:px-12 lg:px-[96px] bg-gray-50 border-b border-[#b1d0d5]/40">
@@ -400,7 +557,60 @@ export function Catalog() {
         </div>
       </div>
 
-      <div className="max-w-[1248px] mx-auto px-4 md:px-[96px] mt-10">
+      <div className="max-w-[1248px] mx-auto px-4 md:px-[96px] mt-8">
+        {/* Multi-Select & Results Header Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-[#004955]">
+              {sorted.length} {sorted.length === 1 ? "mascota disponible" : "mascotas disponibles"}
+            </span>
+            {isMultiSelectMode && (
+              <span className="text-xs bg-[#07c4e1]/20 text-[#004955] px-2.5 py-1 rounded-full font-bold">
+                Modo Selección Múltiple
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {isMultiSelectMode && eligiblePetsInPage.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleSelectAllInPage}
+                className="text-xs font-semibold text-[#00626d] hover:text-[#004955] underline cursor-pointer"
+              >
+                {allInPageSelected ? "Deseleccionar en esta página" : "Seleccionar todas en esta página"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                if (isMultiSelectMode) {
+                  setSelectedPetIds(new Set());
+                }
+                setIsMultiSelectMode((prev) => !prev);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                isMultiSelectMode
+                  ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                  : "bg-[#004955] text-white hover:bg-[#00626d] shadow-xs"
+              }`}
+            >
+              {isMultiSelectMode ? (
+                <>
+                  <Square size={14} />
+                  Salir de selección
+                </>
+              ) : (
+                <>
+                  <Layers size={14} />
+                  Selección múltiple
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {isLoading && !apiPets ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {Array.from({ length: 6 }).map((_, idx) => (
@@ -432,6 +642,9 @@ export function Catalog() {
                   pet={pet}
                   isInManada={manadaMascotas.some((a) => a.animalId === String(pet.id))}
                   onApadrinar={handleApadrinar}
+                  isMultiSelectMode={isMultiSelectMode}
+                  isSelected={selectedPetIds.has(pet.id)}
+                  onToggleSelect={toggleSelectPet}
                 />
               </motion.div>
             ))}
@@ -456,6 +669,53 @@ export function Catalog() {
 
         <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
       </div>
+
+      {/* Floating Multi-Pet Batch Action Bar */}
+      {isMultiSelectMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-[#003840] text-white rounded-2xl p-4 shadow-2xl border border-[#07c4e1]/40 flex items-center justify-between gap-4 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#07c4e1] text-[#004955] flex items-center justify-center font-extrabold text-lg flex-shrink-0">
+                {selectedPetIds.size}
+              </div>
+              <div>
+                <p className="font-semibold text-sm">
+                  {selectedPetIds.size === 1
+                    ? "1 mascota seleccionada"
+                    : `${selectedPetIds.size} mascotas seleccionadas`}
+                </p>
+                <p className="text-xs text-gray-300">
+                  {selectedPetIds.size === 0
+                    ? "Haz clic en las mascotas que deseas sumar"
+                    : "Listas para agregarse a tu Manada"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPetIds(new Set());
+                  setIsMultiSelectMode(false);
+                }}
+                className="px-3 py-2 text-xs font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                disabled={selectedPetIds.size === 0}
+                onClick={handleAddSelectedToManada}
+                className="bg-[#07c4e1] hover:bg-[#06aec8] disabled:opacity-50 disabled:cursor-not-allowed text-[#004955] font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+              >
+                <Check size={16} />
+                Agregar a mi Manada
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
