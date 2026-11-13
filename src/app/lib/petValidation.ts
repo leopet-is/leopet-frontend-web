@@ -117,11 +117,6 @@ export function validatePetPublish(data: Partial<PetFormData>): ValidationResult
     errors.edad = "Ingresa una edad válida mayor o igual a 0 años";
   }
 
-  // 8. Estado de salud (se requiere definir al menos uno)
-  if (data.vacunacion === null || data.vacunacion === undefined) {
-    errors.vacunacion = "Indica si la mascota cuenta con vacunación";
-  }
-
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
@@ -138,7 +133,6 @@ export function getMissingDraftFields(data: Partial<PetFormData>): string[] {
   if (!data.descripcion || data.descripcion.trim().length < 15) missing.push("Descripción");
   if (!data.historia || data.historia.trim().length < 20) missing.push("Historia");
   if (!data.peso || Number(data.peso) <= 0) missing.push("Peso");
-  if (data.vacunacion === null || data.vacunacion === undefined) missing.push("Estado de vacunación");
   return missing;
 }
 

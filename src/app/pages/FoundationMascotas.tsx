@@ -295,6 +295,9 @@ export function FoundationMascotas() {
             sexo: draftData.sexo,
             peso: draftData.peso,
             imagen: draftData.imagen,
+            esterilizacion: draftData.esterilizacion === true,
+            vacunacion: draftData.vacunacion === true,
+            desparasitacion: draftData.desparasitacion === true,
             status: "BORRADOR",
             visible: false,
           });
@@ -321,6 +324,9 @@ export function FoundationMascotas() {
             sexo: draftData.sexo,
             peso: draftData.peso,
             imagen: draftData.imagen,
+            esterilizacion: draftData.esterilizacion === true,
+            vacunacion: draftData.vacunacion === true,
+            desparasitacion: draftData.desparasitacion === true,
             status: "BORRADOR",
             visible: false,
           });
@@ -406,6 +412,9 @@ export function FoundationMascotas() {
             sexo: publishData.sexo,
             peso: publishData.peso,
             imagen: publishData.imagen,
+            esterilizacion: publishData.esterilizacion === true,
+            vacunacion: publishData.vacunacion === true,
+            desparasitacion: publishData.desparasitacion === true,
             status: "REQUIERE_PADRINOS",
             visible: true,
           });
@@ -432,6 +441,9 @@ export function FoundationMascotas() {
             sexo: publishData.sexo,
             peso: publishData.peso,
             imagen: publishData.imagen,
+            esterilizacion: publishData.esterilizacion === true,
+            vacunacion: publishData.vacunacion === true,
+            desparasitacion: publishData.desparasitacion === true,
             status: "REQUIERE_PADRINOS",
             visible: true,
           });
@@ -1012,7 +1024,7 @@ export function FoundationMascotas() {
                   {/* Salud */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Estado de Salud {formErrors.vacunacion && <span className="text-rose-500 font-normal lowercase">(* Indica estado de vacunación)</span>}
+                      Estado de Salud <span className="text-gray-400 font-normal lowercase">(opcional)</span>
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <label className="flex items-center gap-2.5 bg-gray-50 rounded-xl p-3 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
