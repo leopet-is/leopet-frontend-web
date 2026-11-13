@@ -6,7 +6,7 @@ import { useSubscriptions } from '../context/SubscriptionContext';
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { subscriptions } = useSubscriptions();
 
   if (!isAuthenticated) {
@@ -17,6 +17,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <p className="text-gray-500">Inicia sesión para ver tus evidencias y gestionar tu manada.</p>
           <Link to="/mascotas" className="inline-block bg-[#004955] text-white px-6 py-3 rounded-full font-medium hover:bg-[#00626d] transition-colors">
             Explorar Mascotas
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (user?.rol !== "donador") {
+    const profilePath = user?.rol === "fundacion" ? "/fundacion" : "/admin";
+    const profileName = user?.rol === "fundacion" ? "fundación" : "administración";
+
+    return (
+      <div className="bg-white min-h-[calc(100vh-70px)] flex items-center justify-center p-6">
+        <div className="text-center space-y-4">
+          <h2 className="text-[#004955] text-2xl font-bold">Este panel es para donadores</h2>
+          <p className="text-gray-500">Accede al panel correspondiente a tu perfil.</p>
+          <Link to={profilePath} className="inline-block bg-[#004955] text-white px-6 py-3 rounded-full font-medium hover:bg-[#00626d] transition-colors">
+            Ir al panel de {profileName}
           </Link>
         </div>
       </div>

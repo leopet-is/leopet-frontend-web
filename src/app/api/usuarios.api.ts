@@ -45,7 +45,6 @@ export function mapApiUserToFrontend(apiUser: ApiUsuario): User {
     rol,
     estatus: apiUser.estado,
     estaActivo: apiUser.estado === "ACTIVO",
-    sesionActiva: false, // JWT es stateless; inicializa en false
     createdAt: apiUser.createdAt ? apiUser.createdAt.split("T")[0] : undefined,
   };
 }

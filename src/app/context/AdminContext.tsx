@@ -20,8 +20,6 @@ interface AdminContextType {
   fetchUsuarios: () => Promise<void>;
   toggleUserStatus: (id: string) => Promise<void>;
   setUserEstatus: (id: string, nuevoEstatus: User["estatus"]) => Promise<void>;
-  revokeUserSession: (id: string) => void;
-  toggleUserSession: (id: string) => void;
   updateUsuario: (id: string, updates: Partial<User>) => void;
   addSolicitud: (sol: typeof MOCK_SOLICITUDES[0]) => void;
   updateSolicitud: (id: string, updates: Partial<typeof MOCK_SOLICITUDES[0]>) => void;
@@ -79,7 +77,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             ...u,
             estatus: nuevoEstatus,
             estaActivo: !actualmenteActivo,
-            sesionActiva: !actualmenteActivo ? u.sesionActiva : false,
           };
         }
         return u;
@@ -100,32 +97,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             ...u,
             estatus: nuevoEstatus,
             estaActivo: isActivo,
-            sesionActiva: isActivo ? u.sesionActiva : false,
           };
-        }
-        return u;
-      });
-      storage.setUserList(updated);
-      return updated;
-    });
-  }, []);
-
-  const revokeUserSession = useCallback((id: string) => {
-    setUsuarios((prev) => {
-      const updated = prev.map((u) =>
-        u.id === id ? { ...u, sesionActiva: false } : u
-      );
-      storage.setUserList(updated);
-      return updated;
-    });
-  }, []);
-
-  const toggleUserSession = useCallback((id: string) => {
-    setUsuarios((prev) => {
-      const updated = prev.map((u) => {
-        if (u.id === id) {
-          const nuevaSesion = !u.sesionActiva;
-          return { ...u, sesionActiva: nuevaSesion };
         }
         return u;
       });
@@ -229,8 +201,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         fetchUsuarios,
         toggleUserStatus,
         setUserEstatus,
-        revokeUserSession,
-        toggleUserSession,
         updateUsuario,
         addSolicitud,
         updateSolicitud,

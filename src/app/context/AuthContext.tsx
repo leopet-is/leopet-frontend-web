@@ -14,7 +14,7 @@ import {
   type AuthUser as ApiAuthUser,
 } from "../api/auth.api";
 
-interface AuthUser {
+export interface AuthUser {
   id: string;
   nombre: string;
   apellido: string;
@@ -28,7 +28,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (correo: string, password: string) => Promise<void>;
+  login: (correo: string, password: string) => Promise<AuthUser>;
   register: (
     nombre: string,
     apellido: string,
@@ -36,7 +36,7 @@ interface AuthContextType {
     password: string,
     telefono: string,
     cedula: string,
-  ) => Promise<void>;
+  ) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (correo: string, password: string): Promise<void> => {
+    async (correo: string, password: string): Promise<AuthUser> => {
       const response = await loginRequest({
         email: correo,
         password,
@@ -103,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storage.setUser(authUser);
 
       storage.setToken(apiUser.token);
+
+      return authUser;
     },
     []
   );
@@ -117,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string,
       telefono: string,
       cedula: string
-    ): Promise<void> => {
+    ): Promise<AuthUser> => {
       const response = await registerRequest({
         cedula: cedula,
         nombres: nombre,
@@ -138,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storage.setUser(authUser);
 
       storage.setToken(apiUser.token);
+
+      return authUser;
     },
     []
   );

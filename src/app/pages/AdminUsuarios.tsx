@@ -9,7 +9,6 @@ import {
   Eye,
   AlertTriangle,
   X,
-  Wifi,
   Power,
   ShieldAlert,
   Clock,
@@ -21,10 +20,10 @@ import { AdminLayout } from './AdminLayout';
 import type { User } from '../lib/types';
 
 type RoleFilter = 'todos' | User['rol'];
-type StatusFilter = 'todos' | User['estatus'] | 'en_linea';
+type StatusFilter = 'todos' | User['estatus'];
 
 export function AdminUsuarios() {
-  const { usuarios, toggleUserStatus, setUserEstatus, toggleUserSession } = useAdmin();
+  const { usuarios, toggleUserStatus, setUserEstatus } = useAdmin();
 
   // Estados de Filtros y Búsqueda
   const [search, setSearch] = useState('');
@@ -45,7 +44,6 @@ export function AdminUsuarios() {
   const totalCuentas = usuarios.length;
   const totalActivos = usuarios.filter((u) => u.estatus === 'ACTIVO').length;
   const totalBloqueados = usuarios.filter((u) => u.estatus === 'BLOQUEADO').length;
-  const totalEnLinea = usuarios.filter((u) => u.sesionActiva).length;
   const roleFilters: { id: RoleFilter; label: string }[] = [
     { id: 'todos', label: 'Todos los Roles' },
     { id: 'donador', label: `Donadores (${usuarios.filter((u) => u.rol === 'donador').length})` },
@@ -59,11 +57,7 @@ export function AdminUsuarios() {
       if (roleFilter !== 'todos' && u.rol !== roleFilter) return false;
 
       // Filtro de Estado
-      if (statusFilter === 'en_linea') {
-        if (!u.sesionActiva) return false;
-      } else if (statusFilter !== 'todos') {
-        if (u.estatus !== statusFilter) return false;
-      }
+      if (statusFilter !== 'todos' && u.estatus !== statusFilter) return false;
 
       // Búsqueda por texto (nombre, apellido, correo, cédula, fundación)
       if (search.trim()) {
@@ -102,24 +96,9 @@ export function AdminUsuarios() {
   const confirmBlockAccount = () => {
     if (confirmBlockModal) {
       toggleUserStatus(confirmBlockModal.id);
-      showToast(`Cuenta de ${confirmBlockModal.nombre} bloqueada y sesión revocada`);
+      showToast(`Cuenta de ${confirmBlockModal.nombre} bloqueada`);
       setConfirmBlockModal(null);
     }
-  };
-
-  // Manejador del switch de sesión activa
-  const handleToggleSession = (user: User) => {
-    if (user.estatus !== 'ACTIVO') {
-      showToast(`No se puede activar sesión para una cuenta con estado ${user.estatus}`);
-      return;
-    }
-    toggleUserSession(user.id);
-    const willBeActive = !user.sesionActiva;
-    showToast(
-      willBeActive
-        ? `Sesión activa habilitada para ${user.nombre}`
-        : `Sesión de ${user.nombre} cerrada exitosamente`
-    );
   };
 
   // Renderizador de Badge por Estado de BD
@@ -175,12 +154,12 @@ export function AdminUsuarios() {
         <div>
           <h2 className="text-[#004955] text-2xl font-semibold">Control de Usuarios y Cuentas</h2>
           <p className="text-[#3e494a] text-sm mt-1">
-            Gestión en tiempo real de estados de cuenta (ACTIVO, BLOQUEADO, INACTIVO, PENDIENTE_ACTIVACION) y sesiones activas.
+            Gestión de estados de cuenta (ACTIVO, BLOQUEADO, INACTIVO, PENDIENTE_ACTIVACION).
           </p>
         </div>
 
         {/* 1. Tarjetas Métricas (KPIs) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 p-5 flex items-center gap-4 shadow-sm">
             <div className="bg-[#004955]/10 p-3 rounded-xl">
               <Users size={24} className="text-[#004955]" />
@@ -211,18 +190,6 @@ export function AdminUsuarios() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 p-5 flex items-center gap-4 shadow-sm">
-            <div className="bg-emerald-50 p-3 rounded-xl relative">
-              <Wifi size={24} className="text-emerald-600" />
-              {totalEnLinea > 0 && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-              )}
-            </div>
-            <div>
-              <p className="text-[#3e494a] text-xs font-medium">Sesiones Activas</p>
-              <p className="text-[#004955] text-2xl font-bold">{totalEnLinea} en línea</p>
-            </div>
-          </div>
         </div>
 
         {/* 2. Barra de Filtros y Búsqueda */}
@@ -267,7 +234,6 @@ export function AdminUsuarios() {
               { id: 'BLOQUEADO', label: 'Bloqueado' },
               { id: 'INACTIVO', label: 'Inactivo' },
               { id: 'PENDIENTE_ACTIVACION', label: 'Pendiente' },
-              { id: 'en_linea', label: 'En línea' },
             ] satisfies { id: StatusFilter; label: string }[]).map((sf) => (
               <button
                 key={sf.id}
@@ -295,7 +261,6 @@ export function AdminUsuarios() {
                   <th className="px-5 py-3.5 font-semibold text-[#004955] hidden md:table-cell">Identificación</th>
                   <th className="px-5 py-3.5 font-semibold text-[#004955]">Estado</th>
                   <th className="px-5 py-3.5 font-semibold text-[#004955]">Acción Rápida</th>
-                  <th className="px-5 py-3.5 font-semibold text-[#004955]">Sesión Activa</th>
                   <th className="px-5 py-3.5 font-semibold text-[#004955] text-right">Detalle</th>
                 </tr>
               </thead>
@@ -376,42 +341,6 @@ export function AdminUsuarios() {
                         )}
                       </td>
 
-                      {/* Sesión Activa (Switch) */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2.5">
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={!!user.sesionActiva}
-                            disabled={user.estatus !== 'ACTIVO'}
-                            onClick={() => handleToggleSession(user)}
-                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#07c4e1] focus:ring-offset-1 ${
-                              user.sesionActiva ? 'bg-emerald-500' : 'bg-gray-200'
-                            } ${user.estatus !== 'ACTIVO' ? 'opacity-40 cursor-not-allowed' : ''}`}
-                            title={
-                              user.estatus !== 'ACTIVO'
-                                ? 'Cuenta no activa: no puede tener sesión activa'
-                                : user.sesionActiva
-                                ? 'Sesión activa (clic para cerrar)'
-                                : 'Sesión inactiva (clic para activar)'
-                            }
-                          >
-                            <span
-                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                user.sesionActiva ? 'translate-x-4' : 'translate-x-0'
-                              }`}
-                            />
-                          </button>
-                          <span
-                            className={`text-xs font-medium ${
-                              user.sesionActiva ? 'text-emerald-600' : 'text-gray-400'
-                            }`}
-                          >
-                            {user.sesionActiva ? 'En línea' : 'Inactiva'}
-                          </span>
-                        </div>
-                      </td>
-
                       {/* Ver Detalle */}
                       <td className="px-5 py-4 text-right">
                         <button
@@ -458,7 +387,7 @@ export function AdminUsuarios() {
                 ({confirmBlockModal.correo}).
               </p>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 mt-3">
-                ⚠️ El usuario no podrá iniciar sesión y cualquier sesión activa será revocada de inmediato.
+                ⚠️ El usuario perderá acceso hasta que su cuenta vuelva a ser activada.
               </div>
 
               <div className="flex gap-3 mt-6">
@@ -531,7 +460,7 @@ export function AdminUsuarios() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-gray-400 text-xs uppercase font-medium">Cédula</p>
                     <p className="text-gray-800 font-mono">{selectedUser.cedula || 'No registrada'}</p>
@@ -539,25 +468,6 @@ export function AdminUsuarios() {
                   <div>
                     <p className="text-gray-400 text-xs uppercase font-medium">Teléfono</p>
                     <p className="text-gray-800">{selectedUser.telefono || 'No registrado'}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-400 text-xs uppercase font-medium">Sesión</p>
-                    <p className="text-gray-800 flex items-center gap-1.5 mt-0.5">
-                      {selectedUser.sesionActiva ? (
-                        <span className="text-emerald-600 font-medium flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                           Conectado
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                            Desconectado
-                        </span>
-                      )}
-                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-xs uppercase font-medium">Fecha de Registro</p>
@@ -579,7 +489,6 @@ export function AdminUsuarios() {
                         ...selectedUser,
                         estatus: nuevo,
                         estaActivo: nuevo === 'ACTIVO',
-                        sesionActiva: nuevo === 'ACTIVO' ? selectedUser.sesionActiva : false,
                       });
                       showToast(`Estado de ${selectedUser.nombre} actualizado a ${nuevo}`);
                     }}

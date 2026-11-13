@@ -13,7 +13,6 @@ export const MOCK_USUARIOS = [
     rol: "donador",
     estatus: "ACTIVO",
     estaActivo: true,
-    sesionActiva: true,
     createdAt: "2026-02-10",
   },
   {
@@ -26,7 +25,6 @@ export const MOCK_USUARIOS = [
     rol: "donador",
     estatus: "ACTIVO",
     estaActivo: true,
-    sesionActiva: false,
     createdAt: "2026-03-01",
   },
   {
@@ -41,7 +39,6 @@ export const MOCK_USUARIOS = [
     fundacionNombre: "Huellitas Felices",
     estatus: "ACTIVO",
     estaActivo: true,
-    sesionActiva: true,
     createdAt: "2026-01-20",
   },
   {
@@ -56,7 +53,6 @@ export const MOCK_USUARIOS = [
     fundacionNombre: "Refugio Almas Peludas",
     estatus: "PENDIENTE_ACTIVACION",
     estaActivo: false,
-    sesionActiva: false,
     createdAt: "2026-02-05",
   },
   {
@@ -71,7 +67,6 @@ export const MOCK_USUARIOS = [
     fundacionNombre: "Huellitas Sanas",
     estatus: "BLOQUEADO",
     estaActivo: false,
-    sesionActiva: false,
     createdAt: "2026-02-28",
   },
   {
@@ -84,7 +79,6 @@ export const MOCK_USUARIOS = [
     rol: "donador",
     estatus: "INACTIVO",
     estaActivo: false,
-    sesionActiva: false,
     createdAt: "2026-04-12",
   },
   {
@@ -97,7 +91,6 @@ export const MOCK_USUARIOS = [
     rol: "donador",
     estatus: "ACTIVO",
     estaActivo: true,
-    sesionActiva: true,
     createdAt: "2026-05-18",
   },
 ];

@@ -54,6 +54,8 @@ export function NavbarDonador() {
 
   const isAdmin = user?.rol === 'admin';
   const isFoundation = user?.rol === 'fundacion';
+  const dashboardPath = isAdmin ? '/admin' : isFoundation ? '/fundacion' : '/dashboard';
+  const dashboardLabel = isAdmin ? 'Panel Admin' : isFoundation ? 'Panel Fundación' : 'Mi Dashboard';
 
   const visibles = notificaciones.filter((n) => n.visible);
 
@@ -274,33 +276,19 @@ export function NavbarDonador() {
 
                   <div className="py-1">
                     <Link
-                      to="/dashboard"
+                      to={dashboardPath}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <LayoutDashboard size={16} className="text-gray-400" aria-hidden="true" />
-                      Dashboard
-                    </Link>
-                    {isAdmin && (
-                      <Link
-                        to="/admin"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
+                      {isAdmin ? (
                         <Shield size={16} className="text-[#EE5871]" aria-hidden="true" />
-                        Panel Admin
-                      </Link>
-                    )}
-                    {isFoundation && (
-                      <Link
-                        to="/fundacion"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
+                      ) : isFoundation ? (
                         <Building2 size={16} className="text-[#07c4e1]" aria-hidden="true" />
-                        Panel Fundación
-                      </Link>
-                    )}
+                      ) : (
+                        <LayoutDashboard size={16} className="text-gray-400" aria-hidden="true" />
+                      )}
+                      {dashboardLabel}
+                    </Link>
                   </div>
 
                   <div className="border-t border-gray-100 pt-1">
@@ -375,13 +363,15 @@ export function NavbarDonador() {
               <>
                 <div className="w-full h-px bg-white/20 my-3" />
                 <div className="flex flex-col text-white text-lg font-medium font-['Host_Grotesk'] gap-1">
-                  <Link to="/dashboard" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors" role="menuitem">Dashboard</Link>
-                  {isAdmin && (
-                    <Link to="/admin" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors text-[#EE5871] font-semibold" role="menuitem">Panel Admin</Link>
-                  )}
-                  {isFoundation && (
-                    <Link to="/fundacion" className="px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors text-[#07c4e1] font-semibold" role="menuitem">Panel Fundación</Link>
-                  )}
+                  <Link
+                    to={dashboardPath}
+                    className={`px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors ${
+                      isAdmin ? 'text-[#EE5871] font-semibold' : isFoundation ? 'text-[#07c4e1] font-semibold' : ''
+                    }`}
+                    role="menuitem"
+                  >
+                    {dashboardLabel}
+                  </Link>
                 </div>
                 <div className="w-full h-px bg-white/20 my-3" />
                 <button
@@ -410,7 +400,19 @@ export function NavbarDonador() {
         </div>
       )}
 
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={(authenticatedUser) => {
+          navigate(
+            authenticatedUser.rol === 'admin'
+              ? '/admin'
+              : authenticatedUser.rol === 'fundacion'
+                ? '/fundacion'
+                : '/dashboard'
+          );
+        }}
+      />
     </>
   );
 }
