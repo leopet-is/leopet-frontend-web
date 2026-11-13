@@ -2,11 +2,13 @@ import React from "react";
 import { Link } from "react-router";
 import { Heart, ChevronRight } from "lucide-react";
 import { useManada } from "../context/ManadaContext";
+import { useAuth } from "../context/AuthContext";
 
 export function ManadaFloatingBar() {
   const { mascotas } = useManada();
+  const { user } = useAuth();
 
-  if (mascotas.length === 0) return null;
+  if (mascotas.length === 0 || (user && user.rol !== "donador")) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
