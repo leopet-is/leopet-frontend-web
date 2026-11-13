@@ -38,6 +38,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [errorUsuarios, setErrorUsuarios] = useState<string | null>(null);
 
   const fetchUsuarios = useCallback(async () => {
+    const token = storage.getToken();
+    if (!token) {
+      setIsLoadingUsuarios(false);
+      return;
+    }
     try {
       setIsLoadingUsuarios(true);
       setErrorUsuarios(null);

@@ -1,14 +1,16 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { MapPin, Info, Heart, CheckCircle, CheckCircle2, Syringe, Pill, Stethoscope, ArrowLeft } from 'lucide-react';
+import { MapPin, Info, Heart, CheckCircle, CheckCircle2, Syringe, Pill, Stethoscope, ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
 import { useFoundation } from '../context/FoundationContext';
 import { useFavoritos } from '../context/FavoritosContext';
+import { useAuth } from '../context/AuthContext';
 import { MOCK_PETS } from '../lib/mockData';
 import type { Pet } from '../lib/types';
 import { getMascotaByIdApi } from '../api/mascotas.api';
+import { PetDetailSkeleton } from './PetDetailSkeleton';
 
 const FOUNDATION_NAMES: Record<string, string> = {
   "fund-01": "Huellitas Felices",
@@ -27,12 +29,66 @@ const STATUS_LABELS: Record<string, string> = {
   INACTIVO: "Inactivo",
 };
 
+function obtenerTamano(pet: Pet): string {
+  if (pet.peso != null && Number(pet.peso) > 0) {
+    const pesoNum = Number(pet.peso);
+    if (pet.especie === "Gato") {
+      return pesoNum > 5 ? "Mediano" : "Pequeño";
+    }
+    if (pesoNum < 10) return "Pequeño";
+    if (pesoNum <= 25) return "Mediano";
+    return "Grande";
+  }
+
+  if (pet.especie === "Gato") return "Pequeño";
+
+  const razaLower = (pet.raza || "").toLowerCase();
+  const razasPequenas = [
+    "chihuahua",
+    "pomeranea",
+    "pomerania",
+    "poodle",
+    "yorkshire",
+    "pincher",
+    "maltes",
+    "shih tzu",
+    "dachshund",
+    "pug",
+    "frenchie",
+  ];
+  const razasGrandes = [
+    "husky",
+    "pastor",
+    "labrador",
+    "golden",
+    "rottweiler",
+    "danes",
+    "gran danes",
+    "pitbull",
+    "boxer",
+    "doberman",
+    "san bernardo",
+    "akita",
+  ];
+
+  if (razasPequenas.some((r) => razaLower.includes(r))) return "Pequeño";
+  if (razasGrandes.some((r) => razaLower.includes(r))) return "Grande";
+
+  if (pet.edad != null && pet.edad === 0) return "Pequeño";
+
+  return "Mediano";
+}
+
 export function PetDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToManada, mascotas: manadaMascotas } = useManada();
   const foundationContext = useFoundation();
   const { isFavorito, toggleFavorito } = useFavoritos();
+  const { user, isAuthenticated } = useAuth();
+
+  const isPrivileged = Boolean(isAuthenticated && (user?.rol === 'fundacion' || user?.rol === 'admin'));
+  const isAdmin = Boolean(isAuthenticated && user?.rol === 'admin');
 
   const [remotePet, setRemotePet] = React.useState<Pet | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
@@ -46,6 +102,16 @@ export function PetDetail() {
     getMascotaByIdApi(id)
       .then((data) => {
         if (!isMounted) return;
+        if (data) {
+          console.log("[PetDetail] Mascota recibida de API:", {
+            id: data.id,
+            nombre: data.nombre,
+            peso: data.peso,
+            monto_meta_mensual: data.monto_meta_mensual,
+            monto_recaudado_actual: data.monto_recaudado_actual,
+            tokenPresente: Boolean(localStorage.getItem("leopet_token")),
+          });
+        }
         setRemotePet(data);
       })
       .catch((err) => {
@@ -92,14 +158,8 @@ export function PetDetail() {
     }
   };
 
-  if (isLoading && !pet) {
-    return (
-      <div className="bg-white min-h-[60vh] flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-12 h-12 border-4 border-[#00626d] border-t-transparent rounded-full animate-spin mb-4" />
-        <h2 className="text-xl font-bold text-[#004955] mb-1">Cargando información</h2>
-        <p className="text-gray-500 text-sm">Obteniendo detalles de la mascota...</p>
-      </div>
-    );
+  if (isLoading) {
+    return <PetDetailSkeleton isAdmin={isAdmin} />;
   }
 
   if (!pet) {
@@ -199,8 +259,24 @@ export function PetDetail() {
                     <p className="text-[#1b1c1c] text-[24px] font-bold">{pet.sexo}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[#6e797b] text-[12px] font-medium tracking-widest uppercase mb-1">Peso</p>
-                    <p className="text-[#1b1c1c] text-[24px] font-bold">{pet.peso} kg</p>
+                    {isPrivileged ? (
+                      <>
+                        <div className="flex items-center justify-end gap-1.5 mb-1">
+                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-normal normal-case">
+                            <Lock size={10} /> Privado
+                          </span>
+                          <p className="text-[#6e797b] text-[12px] font-medium tracking-widest uppercase">Peso</p>
+                        </div>
+                        <p className="text-[#1b1c1c] text-[24px] font-bold">
+                          {pet.peso != null && Number(pet.peso) > 0 ? `${pet.peso} kg` : "N/D"}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[#6e797b] text-[12px] font-medium tracking-widest uppercase mb-1">Tamaño</p>
+                        <p className="text-[#1b1c1c] text-[24px] font-bold">{obtenerTamano(pet)}</p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -286,6 +362,42 @@ export function PetDetail() {
             </div>
 
             <div className="lg:col-span-4 space-y-6">
+              {isAdmin && (
+                <div className="bg-[#003840] border border-[#07c4e1]/30 text-white p-6 rounded-[24px] shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck size={20} className="text-[#07c4e1]" />
+                      <h3 className="text-lg font-semibold text-white">Panel Administrativo</h3>
+                    </div>
+                    <span className="inline-flex items-center gap-1 bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
+                      <Lock size={11} /> Datos Restringidos
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    Métricas financieras y auditoría visibles únicamente para administradores del sistema.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10">
+                    <div className="bg-white/5 p-3 rounded-xl">
+                      <p className="text-[11px] text-gray-400 uppercase font-medium">Meta Mensual</p>
+                      <p className="text-lg font-bold text-[#07c4e1]">
+                        ${Number(pet.monto_meta_mensual || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded-xl">
+                      <p className="text-[11px] text-gray-400 uppercase font-medium">Recaudado</p>
+                      <p className="text-lg font-bold text-emerald-400">
+                        ${Number(pet.monto_recaudado_actual || 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  {pet.createdAt && (
+                    <p className="text-[11px] text-gray-400 pt-1 border-t border-white/5">
+                      Registrado: {new Date(pet.createdAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="bg-[#004955] text-white p-8 rounded-[24px] shadow-sm space-y-4">
                 <h3 className="text-2xl font-semibold text-[#07c4e1]">¿Por qué apadrinar?</h3>
                 <p className="text-sm leading-relaxed text-gray-200">
