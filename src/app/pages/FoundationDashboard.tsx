@@ -1,22 +1,31 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { PawPrint, Camera, Users, AlertTriangle, ArrowRight, DollarSign, Wallet } from 'lucide-react';
+import { PawPrint, Camera, Users, ArrowRight, DollarSign, Wallet } from 'lucide-react';
 import { useFoundation } from '../context/FoundationContext';
 import { useAuth } from '../context/AuthContext';
 import { usePagos } from '../context/PagoContext';
 import { FoundationLayout } from './FoundationLayout';
 
 export function FoundationDashboard() {
-  const { mascotas, evidencias, advertencias, padrinos } = useFoundation();
+  const {
+    mascotas,
+    evidencias,
+    padrinos,
+    isLoadingMascotas,
+    isLoadingEvidencias,
+    isLoadingPadrinos,
+    errorMascotas,
+    errorEvidencias,
+    errorPadrinos,
+  } = useFoundation();
   const { user } = useAuth();
   const { pagos } = usePagos();
 
-  const fundacionId = user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03";
+  const fundacionId = user?.fundacionId ? String(user.fundacionId) : "";
 
   const totalMascotas = mascotas.length;
   const totalEvidencias = evidencias.length;
-  const padrinosActivos = padrinos.filter((p) => p.estado === "activo").length;
-  const advertenciasPendientes = advertencias.filter((a) => a.estado === "pendiente").length;
+  const padrinosActivos = new Set(padrinos.filter((p) => p.estado === "activo").map((p) => p.manadaId)).size;
   const aporteMensual = padrinos
     .filter((p) => p.estado === "activo")
     .reduce((sum, p) => sum + p.montoMensual, 0);
@@ -27,10 +36,10 @@ export function FoundationDashboard() {
     .reduce((sum, p) => sum + p.montoReembolso, 0);
 
   const stats = [
-    { label: "Mascotas", value: totalMascotas, icon: <PawPrint size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
-    { label: "Evidencias Publicadas", value: totalEvidencias, icon: <Camera size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
-    { label: "Padrinos Activos", value: padrinosActivos, icon: <Users size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
-    { label: "Aporte Mensual", value: `$${aporteMensual}`, icon: <DollarSign size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
+    { label: "Mascotas", value: isLoadingMascotas ? "…" : errorMascotas ? "—" : totalMascotas, icon: <PawPrint size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
+    { label: "Evidencias Publicadas", value: isLoadingEvidencias ? "…" : errorEvidencias ? "—" : totalEvidencias, icon: <Camera size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
+    { label: "Padrinos Activos", value: isLoadingPadrinos ? "…" : errorPadrinos ? "—" : padrinosActivos, icon: <Users size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
+    { label: "Aporte Mensual", value: isLoadingPadrinos ? "…" : errorPadrinos ? "—" : `$${aporteMensual}`, icon: <DollarSign size={24} className="text-[#004955]" />, color: "bg-[#004955]/10" },
   ];
 
   return (
@@ -80,16 +89,6 @@ export function FoundationDashboard() {
                 </div>
                 <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
               </Link>
-              {advertenciasPendientes > 0 && (
-                <Link to="/fundacion/advertencias" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                  <div className="bg-[#004955]/10 p-2 rounded-lg"><AlertTriangle size={18} className="text-[#004955]" /></div>
-                  <div className="flex-1">
-                    <p className="text-[#004955] font-medium text-sm">Alertas Pendientes</p>
-                    <p className="text-[#ee5871] text-xs font-medium">{advertenciasPendientes} por resolver</p>
-                  </div>
-                  <ArrowRight size={16} className="text-gray-400 group-hover:text-[#07c4e1] transition-colors" />
-                </Link>
-              )}
             </div>
           </div>
 

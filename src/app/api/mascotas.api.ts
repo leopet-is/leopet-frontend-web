@@ -9,6 +9,7 @@ export interface ApiAnimal {
   especie: string;
   raza?: string;
   descripcion?: string;
+  historia?: string;
   imagen?: string;
   galeria?: string[] | { fotos: string[] };
   fundacion_id: number;
@@ -56,9 +57,6 @@ export interface MascotasPaginatedResult {
   limit: number;
 }
 
-const DEFAULT_ANIMAL_IMAGE =
-  "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&auto=format&fit=crop&q=80";
-
 /**
  * Calcula la edad en años a partir de la fecha de nacimiento estimada (YYYY-MM-DD)
  */
@@ -97,9 +95,9 @@ export function mapApiAnimalToFrontend(apiAnimal: ApiAnimal): Pet {
     status: apiAnimal.status || "REQUIERE_PADRINOS",
     especie: especieFormateada,
     raza: apiAnimal.raza || "Mestizo",
-    descripcion: apiAnimal.descripcion || "Sin descripción disponible.",
-    historia: apiAnimal.historia || apiAnimal.descripcion || "Sin historia disponible.",
-    imagen: apiAnimal.imagen && apiAnimal.imagen.trim() !== "" ? apiAnimal.imagen : DEFAULT_ANIMAL_IMAGE,
+    descripcion: apiAnimal.descripcion || "",
+    historia: apiAnimal.historia || "",
+    imagen: apiAnimal.imagen || "",
     galeria: normalizarGaleria(apiAnimal.galeria),
     fundacionId: String(apiAnimal.fundacion_id || ""),
     fundacionNombre: apiAnimal.fundacion,
@@ -169,13 +167,21 @@ export async function getMascotasByFundacionApi(
   limit = 100,
   page = 1
 ): Promise<Pet[]> {
-  const response = await apiFetch<GetMascotasResponse>(
-    `/animal/app/fundacion/${fundacionId}?limit=${limit}&page=${page}`,
-    {
+  const all: Pet[] = [];
+  let currentPage = page;
+  let totalPages = page;
+  do {
+    const response = await apiFetch<GetMascotasResponse>(
+      `/animal/app/fundacion/${fundacionId}?limit=${limit}&page=${currentPage}`,
+      {
       method: "GET",
-    }
-  );
-  return (response.result || []).map(mapApiAnimalToFrontend);
+      }
+    );
+    all.push(...(response.result || []).map(mapApiAnimalToFrontend));
+    totalPages = response.totalPages;
+    currentPage += 1;
+  } while (currentPage <= totalPages);
+  return all;
 }
 
 /**

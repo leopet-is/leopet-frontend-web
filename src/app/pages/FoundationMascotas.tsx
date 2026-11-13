@@ -22,21 +22,13 @@ import { useFoundation } from '../context/FoundationContext';
 import { useAuth } from '../context/AuthContext';
 import { FoundationLayout } from './FoundationLayout';
 import { createMascotaApi, updateMascotaApi } from '../api/mascotas.api';
+import { uploadFileApi } from '../api/archivos.api';
 import {
   validatePetDraft,
   validatePetPublish,
   getMissingDraftFields,
   type PetFormData,
 } from '../lib/petValidation';
-import { storage } from '../lib/storage';
-
-import imgMain from "../../imports/DetalleDeMascotaLeoPet/b5e67b3823fbd4287dcd8b82dc791a0d64b1d4a9.png";
-import imgFood from "../../imports/DetalleDeMascotaLeoPet/9ec279e8e0b77d8a1cef5b76d12950fe70e8b841.png";
-import imgPlay from "../../imports/DetalleDeMascotaLeoPet/bd95c8085784a9dd890c235868f306b717608099.png";
-import imgPluto from "../../imports/Catalog/7abaafcc2a09d50e0fc877db77c9c704cd360ae6.png";
-import imgJasper from "../../imports/Manada/05315c921ffb0646b298e09ecd7293761ebbf584.png";
-
-const IMAGENES_MOCK = [imgMain, imgFood, imgPlay, imgPluto, imgJasper];
 
 export type TabOption = 'todas' | 'publicadas' | 'borradores';
 
@@ -49,7 +41,7 @@ const EMPTY_FORM: PetFormData = {
   especie: "Perro",
   descripcion: "",
   historia: "",
-  imagen: IMAGENES_MOCK[0],
+  imagen: "",
   galeria: [],
   visible: true,
   status: "NO_APADRINADO",
@@ -83,7 +75,14 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 export function FoundationMascotas() {
-  const { mascotas, addMascota, updateMascota } = useFoundation();
+  const {
+    mascotas,
+    addMascota,
+    updateMascota,
+    refreshMascotas,
+    isLoadingMascotas,
+    errorMascotas,
+  } = useFoundation();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TabOption>('todas');
@@ -94,14 +93,12 @@ export function FoundationMascotas() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [validationBanner, setValidationBanner] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'amber' | 'error' } | null>(null);
-  const [showImagePicker, setShowImagePicker] = useState(false);
   const [imageUrlInput, setImageUrlInput] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const fundacionId = user?.fundacionId
-    ? String(user.fundacionId)
-    : (user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03");
+  const fundacionId = user?.fundacionId ? String(user.fundacionId) : "";
 
   const foundationMascotas = mascotas.filter((m) => m.fundacionId === fundacionId);
 
@@ -141,8 +138,8 @@ export function FoundationMascotas() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setValidationBanner(null);
-    setShowImagePicker(false);
     setImageUrlInput("");
+    setImageFile(null);
     setShowModal(true);
   };
 
@@ -158,7 +155,7 @@ export function FoundationMascotas() {
       especie: mascota.especie || "Perro",
       descripcion: mascota.descripcion || "",
       historia: mascota.historia || "",
-      imagen: mascota.imagen || IMAGENES_MOCK[0],
+      imagen: mascota.imagen || "",
       galeria: mascota.galeria || [],
       visible: mascota.visible !== false,
       status: mascota.status || "NO_APADRINADO",
@@ -169,8 +166,8 @@ export function FoundationMascotas() {
     });
     setFormErrors({});
     setValidationBanner(null);
-    setShowImagePicker(false);
     setImageUrlInput("");
+    setImageFile(null);
     setShowModal(true);
   };
 
@@ -181,6 +178,7 @@ export function FoundationMascotas() {
         setFormErrors((prev) => ({ ...prev, imagen: "Por favor selecciona un archivo de imagen válido" }));
         return;
       }
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
@@ -194,8 +192,32 @@ export function FoundationMascotas() {
 
   const handleImageUrlChange = (url: string) => {
     setImageUrlInput(url);
+    setImageFile(null);
     setForm((prev) => ({ ...prev, imagen: url }));
     clearFieldError("imagen");
+  };
+
+  const buildApiPayload = async (data: PetFormData, status: string, visible: boolean) => {
+    const imagen = imageFile ? await uploadFileApi(imageFile) : (data.imagen.startsWith("data:") ? "" : data.imagen);
+    const nacimientoEstimado = new Date();
+    nacimientoEstimado.setFullYear(nacimientoEstimado.getFullYear() - Math.max(0, data.edad));
+    return {
+      nombre: data.nombre,
+      raza: data.raza,
+      descripcion: data.descripcion,
+      historia: data.historia,
+      especie: data.especie,
+      sexo: data.sexo,
+      peso: data.peso,
+      imagen,
+      status,
+      visible,
+      fecha_nacimiento_estimada: data.edad > 0 ? nacimientoEstimado.toISOString().slice(0, 10) : undefined,
+      enfermedades: data.enfermedades,
+      esterilizacion: data.esterilizacion,
+      vacunacion: data.vacunacion,
+      desparasitacion: data.desparasitacion,
+    };
   };
 
   const handleNextStep = () => {
@@ -223,7 +245,6 @@ export function FoundationMascotas() {
     }
   };
 
-  // Guardar como Borrador (Validación Permisiva)
   const handleSaveDraft = async () => {
     const validation = validatePetDraft(form);
     if (!validation.isValid) {
@@ -232,92 +253,26 @@ export function FoundationMascotas() {
       return;
     }
 
-    const draftData = {
-      ...form,
-      status: "BORRADOR",
-      visible: false,
-    };
-
     setIsSubmitting(true);
     try {
-      const token = storage.getToken();
-      if (token && editingId && typeof editingId === 'number' && editingId < 1000000000000) {
-        try {
-          const apiPet = await updateMascotaApi(editingId, {
-            nombre: draftData.nombre,
-            raza: draftData.raza,
-            descripcion: draftData.descripcion,
-            especie: draftData.especie,
-            sexo: draftData.sexo,
-            peso: draftData.peso,
-            imagen: draftData.imagen,
-            status: "BORRADOR",
-            visible: false,
-          });
-          updateMascota(editingId, { ...draftData, ...apiPet });
-          showToast("Borrador guardado en la base de datos", "amber");
-        } catch (apiErr) {
-          console.warn("Aviso API update, respaldo local:", apiErr);
-          updateMascota(editingId, draftData);
-          showToast("Borrador guardado localmente", "amber");
-        }
-      } else if (token && !editingId) {
-        try {
-          const apiPet = await createMascotaApi({
-            nombre: draftData.nombre,
-            raza: draftData.raza,
-            descripcion: draftData.descripcion,
-            especie: draftData.especie,
-            sexo: draftData.sexo,
-            peso: draftData.peso,
-            imagen: draftData.imagen,
-            status: "BORRADOR",
-            visible: false,
-          });
-          addMascota({
-            ...draftData,
-            ...apiPet,
-            fundacionId: apiPet.fundacionId || fundacionId,
-          });
-          showToast("Borrador registrado en la base de datos", "amber");
-        } catch (apiErr) {
-          console.warn("Aviso API create, respaldo local:", apiErr);
-          const now = new Date().toISOString();
-          addMascota({
-            ...draftData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-          showToast("Borrador guardado localmente", "amber");
-        }
+      if (!fundacionId) throw new Error("No se encontró la fundación asociada a esta cuenta.");
+      const payload = await buildApiPayload(form, "BORRADOR", false);
+      if (editingId) {
+        const apiPet = await updateMascotaApi(editingId, payload);
+        updateMascota(editingId, apiPet);
       } else {
-        if (editingId) {
-          updateMascota(editingId, draftData);
-        } else {
-          const now = new Date().toISOString();
-          addMascota({
-            ...draftData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-        }
-        showToast("Borrador guardado exitosamente", "amber");
+        addMascota(await createMascotaApi(payload));
       }
+      setImageFile(null);
+      showToast("Borrador guardado en el servidor", "amber");
       setShowModal(false);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "No se pudo guardar el borrador.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Publicar Mascota (Validación Estricta)
   const handlePublish = async () => {
     const validation = validatePetPublish(form);
     if (!validation.isValid) {
@@ -333,94 +288,34 @@ export function FoundationMascotas() {
       return;
     }
 
-    const publishData = {
-      ...form,
-      status: "REQUIERE_PADRINOS",
-      visible: true,
-    };
-
     setIsSubmitting(true);
     try {
-      const token = storage.getToken();
-      if (token && editingId && typeof editingId === 'number' && editingId < 1000000000000) {
-        try {
-          const apiPet = await updateMascotaApi(editingId, {
-            nombre: publishData.nombre,
-            raza: publishData.raza,
-            descripcion: publishData.descripcion,
-            especie: publishData.especie,
-            sexo: publishData.sexo,
-            peso: publishData.peso,
-            imagen: publishData.imagen,
-            status: "REQUIERE_PADRINOS",
-            visible: true,
-          });
-          updateMascota(editingId, { ...publishData, ...apiPet });
-          showToast("¡Mascota publicada exitosamente en el catálogo!", "success");
-        } catch (apiErr) {
-          console.warn("Aviso API update, respaldo local:", apiErr);
-          updateMascota(editingId, publishData);
-          showToast("Mascota publicada localmente", "success");
-        }
-      } else if (token && !editingId) {
-        try {
-          const apiPet = await createMascotaApi({
-            nombre: publishData.nombre,
-            raza: publishData.raza,
-            descripcion: publishData.descripcion,
-            especie: publishData.especie,
-            sexo: publishData.sexo,
-            peso: publishData.peso,
-            imagen: publishData.imagen,
-            status: "REQUIERE_PADRINOS",
-            visible: true,
-          });
-          addMascota({
-            ...publishData,
-            ...apiPet,
-            fundacionId: apiPet.fundacionId || fundacionId,
-          });
-          showToast("¡Mascota registrada y publicada en catálogo!", "success");
-        } catch (apiErr) {
-          console.warn("Aviso API create, respaldo local:", apiErr);
-          const now = new Date().toISOString();
-          addMascota({
-            ...publishData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-          showToast("Mascota publicada localmente", "success");
-        }
+      if (!fundacionId) throw new Error("No se encontró la fundación asociada a esta cuenta.");
+      const payload = await buildApiPayload(form, "REQUIERE_PADRINOS", true);
+      if (editingId) {
+        const apiPet = await updateMascotaApi(editingId, payload);
+        updateMascota(editingId, apiPet);
       } else {
-        if (editingId) {
-          updateMascota(editingId, publishData);
-        } else {
-          const now = new Date().toISOString();
-          addMascota({
-            ...publishData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-        }
-        showToast("¡Mascota publicada con éxito!", "success");
+        addMascota(await createMascotaApi(payload));
       }
+      setImageFile(null);
+      showToast("Mascota publicada en el catálogo.", "success");
       setShowModal(false);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "No se pudo publicar la mascota.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const toggleVisibility = (id: number, currentVisible: boolean) => {
-    updateMascota(id, { visible: !currentVisible });
-    showToast(`Mascota ${currentVisible ? "ocultada" : "mostrada"} en el catálogo`);
+  const toggleVisibility = async (id: number, currentVisible: boolean) => {
+    try {
+      const updatedPet = await updateMascotaApi(id, { visible: !currentVisible });
+      updateMascota(id, updatedPet);
+      showToast(`Mascota ${currentVisible ? "ocultada" : "mostrada"} en el catálogo`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "No se pudo cambiar la visibilidad.", "error");
+    }
   };
 
   return (
@@ -490,6 +385,16 @@ export function FoundationMascotas() {
             />
           </div>
         </div>
+
+        {errorMascotas && (
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <p>No se pudieron cargar las mascotas: {errorMascotas}</p>
+            <button type="button" onClick={() => void refreshMascotas()} className="mt-2 font-semibold underline">
+              Reintentar
+            </button>
+          </div>
+        )}
+        {isLoadingMascotas && <p className="py-8 text-center text-sm text-gray-500">Cargando mascotas...</p>}
 
         {/* Cuadrícula de Mascotas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -621,7 +526,7 @@ export function FoundationMascotas() {
           })}
         </div>
 
-        {filteredMascotas.length === 0 && (
+        {!isLoadingMascotas && !errorMascotas && filteredMascotas.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-gray-200/70 p-8">
             <PawPrint size={48} className="text-gray-300 mx-auto mb-3" />
             <h3 className="text-base font-bold text-gray-700">No se encontraron mascotas</h3>
@@ -858,14 +763,6 @@ export function FoundationMascotas() {
                           <Upload size={14} />
                           Subir foto desde este equipo
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowImagePicker(!showImagePicker)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-[#004955] rounded-xl text-xs font-semibold transition-colors border border-gray-200 cursor-pointer"
-                        >
-                          <Camera size={14} />
-                          Elegir imagen de muestra
-                        </button>
                         <input
                           type="url"
                           placeholder="O pega aquí una URL directa..."
@@ -878,29 +775,6 @@ export function FoundationMascotas() {
 
                     {formErrors.imagen && <p className="text-rose-500 text-xs mt-1.5 font-medium">{formErrors.imagen}</p>}
 
-                    {showImagePicker && (
-                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-200 mt-2">
-                        <p className="text-xs font-medium text-gray-500 mb-2">Selecciona una imagen de muestra:</p>
-                        <div className="grid grid-cols-5 gap-2">
-                          {IMAGENES_MOCK.map((img, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => {
-                                setForm({ ...form, imagen: img });
-                                clearFieldError("imagen");
-                                setShowImagePicker(false);
-                              }}
-                              className={`w-full aspect-square rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
-                                form.imagen === img ? "border-[#07c4e1] ring-2 ring-[#07c4e1]/30" : "border-transparent hover:border-gray-300"
-                              }`}
-                            >
-                              <img src={img} alt={`Muestra ${i + 1}`} className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Descripción Corta */}

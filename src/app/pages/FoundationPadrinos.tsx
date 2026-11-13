@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
 import { Search, Users, PawPrint, DollarSign } from 'lucide-react';
 import { useFoundation } from '../context/FoundationContext';
-import { useAuth } from '../context/AuthContext';
 import { FoundationLayout } from './FoundationLayout';
 
 export function FoundationPadrinos() {
-  const { padrinos } = useFoundation();
-  const { user } = useAuth();
+  const { padrinos, isLoadingPadrinos, errorPadrinos, refreshPadrinos } = useFoundation();
   const [search, setSearch] = useState("");
 
-  const fundacionId = user?.id === "usr-fund1" ? "fund-01" : user?.id === "usr-fund2" ? "fund-02" : "fund-03";
-
-  const misPadrinos = padrinos.filter((p) => {
-    if (p.fundacionId !== fundacionId) return false;
-    if (search && !p.donadorNombre.toLowerCase().includes(search.toLowerCase()) && !p.mascotaNombre.toLowerCase().includes(search.toLowerCase())) return false;
+  const misPadrinos = padrinos.filter((padrino) => {
+    if (search && !padrino.donadorNombre.toLowerCase().includes(search.toLowerCase()) && !padrino.mascotaNombre.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -21,32 +16,24 @@ export function FoundationPadrinos() {
     .filter((p) => p.estado === "activo")
     .reduce((sum, p) => sum + p.montoMensual, 0);
 
-  const activos = misPadrinos.filter((p) => p.estado === "activo").length;
-  const pausados = misPadrinos.filter((p) => p.estado === "pausado").length;
+  const activos = new Set(misPadrinos.filter((p) => p.estado === "activo").map((p) => p.manadaId)).size;
 
   return (
     <FoundationLayout>
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 p-5 flex items-center gap-4 shadow-sm">
             <div className="bg-[#004955]/10 p-3 rounded-xl"><Users size={24} className="text-[#004955]" /></div>
             <div>
               <p className="text-[#3e494a] text-xs font-medium">Padrinos Activos</p>
-              <p className="text-[#004955] text-2xl font-bold">{activos}</p>
-            </div>
+              <p className="text-[#004955] text-2xl font-bold">{isLoadingPadrinos ? "…" : errorPadrinos ? "—" : activos}</p>
+            </div>}
           </div>
           <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 p-5 flex items-center gap-4 shadow-sm">
             <div className="bg-[#004955]/10 p-3 rounded-xl"><DollarSign size={24} className="text-[#004955]" /></div>
             <div>
               <p className="text-[#3e494a] text-xs font-medium">Aporte Mensual</p>
-              <p className="text-[#004955] text-2xl font-bold">${totalMensual}</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 p-5 flex items-center gap-4 shadow-sm">
-            <div className="bg-[#004955]/10 p-3 rounded-xl"><Users size={24} className="text-[#004955]" /></div>
-            <div>
-              <p className="text-[#3e494a] text-xs font-medium">Pausados</p>
-              <p className="text-[#004955] text-2xl font-bold">{pausados}</p>
+              <p className="text-[#004955] text-2xl font-bold">{isLoadingPadrinos ? "…" : errorPadrinos ? "—" : `$${totalMensual}`}</p>
             </div>
           </div>
         </div>
@@ -62,7 +49,16 @@ export function FoundationPadrinos() {
           />
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 shadow-sm overflow-hidden">
+        {errorPadrinos && (
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <p>No se pudieron cargar los padrinos: {errorPadrinos}</p>
+            <button type="button" onClick={() => void refreshPadrinos()} className="mt-2 font-semibold underline">
+              Reintentar
+            </button>
+          </div>
+        )}
+        {isLoadingPadrinos && <p className="py-8 text-center text-sm text-gray-500">Cargando padrinos...</p>}
+        {!errorPadrinos && !isLoadingPadrinos && <div className="bg-white rounded-2xl border border-[#BDC8CA]/40 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -80,7 +76,7 @@ export function FoundationPadrinos() {
                     <td className="px-5 py-4">
                       <div>
                         <p className="text-[#004955] font-medium text-sm">{padrino.donadorNombre}</p>
-                        <p className="text-gray-500 text-xs">{padrino.donadorCorreo}</p>
+                        <p className="text-gray-500 text-xs">{padrino.manadaNombre}</p>
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -112,7 +108,7 @@ export function FoundationPadrinos() {
           {misPadrinos.length === 0 && (
             <div className="text-center py-12">
               <Users size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No se encontraron padrinos</p>
+              <p className="text-gray-500">No hay padrinos activos para mostrar</p>
             </div>
           )}
         </div>

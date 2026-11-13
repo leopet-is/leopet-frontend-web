@@ -4,8 +4,9 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   const url =`${GLOBALCONFIG.EndpointBackHost}${endpoint}`; 
 
   const headers = new Headers(options.headers);
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
 
-  if (!headers.has('Content-Type')) {
+  if (!isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 

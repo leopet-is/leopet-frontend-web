@@ -4,13 +4,21 @@ import { useAdmin } from '../context/AdminContext';
 import { AdminLayout } from './AdminLayout';
 
 export function AdminSolicitudes() {
-  const { solicitudes, updateSolicitud } = useAdmin();
+  const {
+    solicitudes,
+    isLoadingSolicitudes,
+    errorSolicitudes,
+    fetchSolicitudes,
+    aprobarSolicitud,
+    rechazarSolicitud,
+  } = useAdmin();
   const [filter, setFilter] = useState<"todas" | "Pendiente" | "Aprobada" | "Rechazada">("todas");
   const [search, setSearch] = useState("");
   const [selectedSol, setSelectedSol] = useState<typeof solicitudes[0] | null>(null);
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [toast, setToast] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const filtered = solicitudes.filter((s) => {
     if (filter !== "todas" && s.estado !== filter) return false;
@@ -23,19 +31,29 @@ export function AdminSolicitudes() {
     setTimeout(() => setToast(""), 3000);
   };
 
-  const handleApprove = (id: string) => {
-    updateSolicitud(id, { estado: "Aprobada" });
-    setSelectedSol(null);
-    showToast("Fundación Aprobada Exitosamente");
+  const handleApprove = async (id: string) => {
+    setActionError("");
+    try {
+      const message = await aprobarSolicitud(id);
+      setSelectedSol(null);
+      showToast(message);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No se pudo aprobar la solicitud.");
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectModal || !rejectReason.trim()) return;
-    updateSolicitud(rejectModal, { estado: "Rechazada", motivoRechazo: rejectReason });
-    setRejectModal(null);
-    setRejectReason("");
-    setSelectedSol(null);
-    showToast("Solicitud Rechazada");
+    setActionError("");
+    try {
+      const message = await rechazarSolicitud(rejectModal, rejectReason);
+      setRejectModal(null);
+      setRejectReason("");
+      setSelectedSol(null);
+      showToast(message);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No se pudo rechazar la solicitud.");
+    }
   };
 
   const estadoBadge = (estado: string) => {
@@ -61,6 +79,17 @@ export function AdminSolicitudes() {
           <h2 className="text-[#004955] text-2xl font-semibold">Solicitudes de Fundaciones</h2>
           <p className="text-[#3e494a] text-sm mt-1">Revisa y gestiona las solicitudes de registro de nuevas fundaciones.</p>
         </div>
+
+        {(errorSolicitudes || actionError) && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+            <p>{actionError || errorSolicitudes}</p>
+            {errorSolicitudes && (
+              <button onClick={() => void fetchSolicitudes()} className="mt-2 font-semibold underline">
+                Reintentar
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="flex gap-2 flex-wrap">
@@ -103,7 +132,7 @@ export function AdminSolicitudes() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((sol) => (
+                {!isLoadingSolicitudes && filtered.map((sol) => (
                   <tr key={sol.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-4">
                       <p className="font-medium text-[#004955]">{sol.fundacionNombre}</p>
@@ -151,12 +180,14 @@ export function AdminSolicitudes() {
               </tbody>
             </table>
           </div>
-          {filtered.length === 0 && (
+          {isLoadingSolicitudes ? (
+            <div className="py-12 text-center text-sm text-gray-500" role="status">Cargando solicitudes…</div>
+          ) : !errorSolicitudes && filtered.length === 0 ? (
             <div className="text-center py-12">
               <FileText size={40} className="mx-auto text-gray-300 mb-3" />
               <p className="text-gray-500 font-medium">No se encontraron solicitudes</p>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Detail Modal */}
@@ -216,6 +247,9 @@ export function AdminSolicitudes() {
                         <FileText size={20} className="text-gray-400" />
                       </div>
                     ))}
+                    {selectedSol.documentosUrls.length === 0 && (
+                      <p className="text-gray-500 text-sm">La API de solicitudes no proporciona documentos adjuntos.</p>
+                    )}
                   </div>
                 </div>
               </div>
