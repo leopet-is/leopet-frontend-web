@@ -214,9 +214,9 @@ export function FoundationMascotas() {
       visible,
       fecha_nacimiento_estimada: data.edad > 0 ? nacimientoEstimado.toISOString().slice(0, 10) : undefined,
       enfermedades: data.enfermedades,
-      esterilizacion: data.esterilizacion,
-      vacunacion: data.vacunacion,
-      desparasitacion: data.desparasitacion,
+      esterilizacion: data.esterilizacion === true,
+      vacunacion: data.vacunacion === true,
+      desparasitacion: data.desparasitacion === true,
     };
   };
 
