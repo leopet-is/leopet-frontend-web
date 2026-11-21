@@ -74,6 +74,8 @@ const statusBadgeClass: Record<string, string> = {
   EN_TRATAMIENTO: "bg-rose-50 text-rose-700 border border-rose-200 font-semibold",
 };
 
+type PetSaveData = PetFormData & { status: string; visible: boolean };
+
 export function FoundationMascotas() {
   const { mascotas, addMascota, updateMascota } = useFoundation();
   const { user } = useAuth();
@@ -293,6 +295,41 @@ export function FoundationMascotas() {
     }
   };
 
+  const savePetLocally = (data: PetSaveData) => {
+    if (editingId !== null) {
+      updateMascota(editingId, data);
+      setApiMascotas((current) =>
+        current?.map((pet) => (pet.id === editingId ? { ...pet, ...data } : pet)) ?? current
+      );
+      return;
+    }
+
+    const now = new Date().toISOString();
+    addMascota({
+      ...data,
+      id: Date.now(),
+      fundacionId,
+      createdAt: now,
+      updatedAt: now,
+      fechaRegistro: now.split("T")[0],
+      ubicacion: "Guayaquil",
+    });
+  };
+
+  const mergeApiPet = (apiPet: Pet, data: PetSaveData): Pet => ({
+    ...apiPet,
+    ...data,
+    id: apiPet.id,
+    fundacionId: apiPet.fundacionId || fundacionId,
+  });
+
+  const upsertApiPet = (pet: Pet) => {
+    setApiMascotas((current) => [
+      pet,
+      ...(current || []).filter((currentPet) => currentPet.id !== pet.id),
+    ]);
+  };
+
   // Guardar como Borrador (Validación Permisiva)
   const handleSaveDraft = async () => {
     const validation = validatePetDraft(form);
@@ -302,7 +339,7 @@ export function FoundationMascotas() {
       return;
     }
 
-    const draftData = {
+    const draftData: PetSaveData = {
       ...form,
       status: "BORRADOR",
       visible: false,
@@ -311,43 +348,38 @@ export function FoundationMascotas() {
     setIsSubmitting(true);
     try {
       const token = storage.getToken();
-      if (token) {
-        const payload = buildApiPayload(draftData, "BORRADOR", false);
-        const apiPet = editingId !== null
-          ? await updateMascotaApi(editingId, payload)
-          : await createMascotaApi(payload);
-        const savedPet: Pet = {
-          ...apiPet,
-          ...draftData,
-          id: apiPet.id,
-          fundacionId: apiPet.fundacionId || fundacionId,
-        };
-
-        if (editingId !== null) {
+      const isServerPet = editingId !== null && editingId < 1_000_000_000_000;
+      if (token && isServerPet) {
+        try {
+          const apiPet = await updateMascotaApi(
+            editingId,
+            buildApiPayload(draftData, "BORRADOR", false)
+          );
+          const savedPet = mergeApiPet(apiPet, draftData);
           updateMascota(editingId, savedPet);
-        } else {
+          upsertApiPet(savedPet);
+          showToast("Borrador actualizado en el servidor.", "amber");
+        } catch (error) {
+          console.warn("No se pudo actualizar el borrador en el servidor; se guardará localmente:", error);
+          savePetLocally(draftData);
+          showToast("No se pudo guardar en el servidor. Borrador guardado localmente.", "amber");
+        }
+      } else if (token && editingId === null) {
+        try {
+          const apiPet = await createMascotaApi(
+            buildApiPayload(draftData, "BORRADOR", false)
+          );
+          const savedPet = mergeApiPet(apiPet, draftData);
           addMascota(savedPet);
+          upsertApiPet(savedPet);
+          showToast("Borrador registrado en el servidor.", "amber");
+        } catch (error) {
+          console.warn("No se pudo registrar el borrador en el servidor; se guardará localmente:", error);
+          savePetLocally(draftData);
+          showToast("No se pudo guardar en el servidor. Borrador guardado localmente.", "amber");
         }
-        setApiMascotas((current) => [
-          savedPet,
-          ...(current || []).filter((pet) => pet.id !== savedPet.id),
-        ]);
-        showToast(editingId !== null ? "Borrador actualizado en el servidor." : "Borrador registrado en el servidor.", "amber");
       } else {
-        if (editingId !== null) {
-          updateMascota(editingId, draftData);
-        } else {
-          const now = new Date().toISOString();
-          addMascota({
-            ...draftData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-        }
+        savePetLocally(draftData);
         showToast("Borrador guardado localmente.", "amber");
       }
       setShowModal(false);
@@ -375,7 +407,7 @@ export function FoundationMascotas() {
       return;
     }
 
-    const publishData = {
+    const publishData: PetSaveData = {
       ...form,
       status: "REQUIERE_PADRINOS",
       visible: true,
@@ -384,43 +416,38 @@ export function FoundationMascotas() {
     setIsSubmitting(true);
     try {
       const token = storage.getToken();
-      if (token) {
-        const payload = buildApiPayload(publishData, "REQUIERE_PADRINOS", true);
-        const apiPet = editingId !== null
-          ? await updateMascotaApi(editingId, payload)
-          : await createMascotaApi(payload);
-        const savedPet: Pet = {
-          ...apiPet,
-          ...publishData,
-          id: apiPet.id,
-          fundacionId: apiPet.fundacionId || fundacionId,
-        };
-
-        if (editingId !== null) {
+      const isServerPet = editingId !== null && editingId < 1_000_000_000_000;
+      if (token && isServerPet) {
+        try {
+          const apiPet = await updateMascotaApi(
+            editingId,
+            buildApiPayload(publishData, "REQUIERE_PADRINOS", true)
+          );
+          const savedPet = mergeApiPet(apiPet, publishData);
           updateMascota(editingId, savedPet);
-        } else {
+          upsertApiPet(savedPet);
+          showToast("Mascota actualizada y publicada.", "success");
+        } catch (error) {
+          console.warn("No se pudo publicar la mascota en el servidor; se guardará localmente:", error);
+          savePetLocally(publishData);
+          showToast("No se pudo guardar en el servidor. Mascota publicada localmente.", "success");
+        }
+      } else if (token && editingId === null) {
+        try {
+          const apiPet = await createMascotaApi(
+            buildApiPayload(publishData, "REQUIERE_PADRINOS", true)
+          );
+          const savedPet = mergeApiPet(apiPet, publishData);
           addMascota(savedPet);
+          upsertApiPet(savedPet);
+          showToast("Mascota registrada y publicada en el catálogo.", "success");
+        } catch (error) {
+          console.warn("No se pudo registrar la mascota en el servidor; se guardará localmente:", error);
+          savePetLocally(publishData);
+          showToast("No se pudo guardar en el servidor. Mascota publicada localmente.", "success");
         }
-        setApiMascotas((current) => [
-          savedPet,
-          ...(current || []).filter((pet) => pet.id !== savedPet.id),
-        ]);
-        showToast(editingId !== null ? "Mascota actualizada y publicada." : "Mascota registrada y publicada en el catálogo.", "success");
       } else {
-        if (editingId !== null) {
-          updateMascota(editingId, publishData);
-        } else {
-          const now = new Date().toISOString();
-          addMascota({
-            ...publishData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-        }
+        savePetLocally(publishData);
         showToast("Mascota publicada localmente.", "success");
       }
       setShowModal(false);
@@ -953,7 +980,7 @@ export function FoundationMascotas() {
                   {/* Salud */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Estado de Salud {formErrors.vacunacion && <span className="text-rose-500 font-normal lowercase">(* Indica estado de vacunación)</span>}
+                      Estado de Salud <span className="text-gray-400 font-normal lowercase">(opcional)</span>
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <label className="flex items-center gap-2.5 bg-gray-50 rounded-xl p-3 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">

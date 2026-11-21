@@ -19,7 +19,7 @@ function daysBetween(dateStr: string): number {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return 0;
   const now = new Date();
-  const refDate = now.getTime() > d.getTime() ? now : new Date("2026-07-25");
+  const refDate = now.getTime() > d.getTime() ? now : TODAY;
   return Math.max(0, Math.floor((refDate.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
