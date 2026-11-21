@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { MapPin, Info, Heart, CheckCircle, CheckCircle2, Syringe, Pill, Stethoscope, ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
+import { MapPin, Info, Heart, CheckCircle, Syringe, Pill, Stethoscope, ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useManada } from '../context/ManadaContext';
@@ -92,7 +92,6 @@ export function PetDetail() {
 
   const [remotePet, setRemotePet] = React.useState<Pet | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
-  const [hasFetched, setHasFetched] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (!id) return;
@@ -121,7 +120,6 @@ export function PetDetail() {
       .finally(() => {
         if (isMounted) {
           setIsLoading(false);
-          setHasFetched(true);
         }
       });
 

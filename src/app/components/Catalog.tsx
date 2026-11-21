@@ -288,12 +288,10 @@ export function Catalog() {
   // Live backend data state with fallback
   const [apiPets, setApiPets] = useState<Pet[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
-    setLoadError(null);
 
     getMascotasApi({ limit: 100 })
       .then((res) => {
@@ -304,7 +302,6 @@ export function Catalog() {
         if (!isMounted) return;
         const msg = (err as Error).message || "No se pudo conectar con el servidor.";
         console.warn("API de mascotas no disponible, usando respaldo local:", msg);
-        setLoadError(msg);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);

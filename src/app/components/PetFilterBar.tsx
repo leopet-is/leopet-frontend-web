@@ -140,7 +140,7 @@ export function PetFilterBar({
             <span className="text-gray-600"> · Especie: {species === "Perro" ? "Perros" : "Gatos"}</span>
           )}
           {search && (
-            <span className="text-gray-600"> · Coincidencia con "{search}"</span>
+            <span className="text-gray-600"> · Coincidencia con &quot;{search}&quot;</span>
           )}
         </p>
 
