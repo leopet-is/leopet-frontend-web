@@ -325,7 +325,8 @@ export function Catalog() {
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [sort, setSort] = useState<SortMode>(
-    (searchParams.get("sort") as SortMode) || "recomendado"
+    (searchParams.get("sort") as SortMode) ||
+      (searchParams.get("urgente") === "true" ? "recomendado" : "recientes")
   );
   const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
 
@@ -343,7 +344,8 @@ export function Catalog() {
     if (filter !== "todos") params.set("especie", filter);
     if (urgencyOnly) params.set("urgente", "true");
     if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
-    if (sort !== "recomendado") params.set("sort", sort);
+    const defaultSort = urgencyOnly ? "recomendado" : "recientes";
+    if (sort !== defaultSort) params.set("sort", sort);
     if (page > 1) params.set("page", String(page));
 
     if (params.toString() !== searchParams.toString()) {
@@ -358,7 +360,10 @@ export function Catalog() {
     setFilter(validSp);
     setUrgencyOnly(searchParams.get("urgente") === "true");
     setSearch(searchParams.get("q") || "");
-    setSort((searchParams.get("sort") as SortMode) || "recomendado");
+    setSort(
+      (searchParams.get("sort") as SortMode) ||
+        (searchParams.get("urgente") === "true" ? "recomendado" : "recientes")
+    );
     setPage(Number(searchParams.get("page")) || 1);
   }, [searchParams]);
 
@@ -389,7 +394,11 @@ export function Catalog() {
     };
   }, [ranked, filter]);
 
-  const isFiltered = filter !== "todos" || search.trim() !== "" || urgencyOnly || sort !== "recomendado";
+  const isFiltered =
+    filter !== "todos" ||
+    search.trim() !== "" ||
+    urgencyOnly ||
+    sort !== (urgencyOnly ? "recomendado" : "recientes");
 
   const resetPage = () => setPage(1);
 
@@ -398,7 +407,7 @@ export function Catalog() {
     setUrgencyOnly(false);
     setSearch("");
     setDebouncedSearch("");
-    setSort("recomendado");
+    setSort("recientes");
     setPage(1);
     setSearchParams(new URLSearchParams(), { replace: true });
   };
@@ -540,7 +549,12 @@ export function Catalog() {
             species={filter}
             onSpeciesChange={(s) => { setFilter(s); resetPage(); }}
             urgencyOnly={urgencyOnly}
-            onUrgencyToggle={() => { setUrgencyOnly((prev) => !prev); resetPage(); }}
+            onUrgencyToggle={() => {
+              const nextUrgencyOnly = !urgencyOnly;
+              setUrgencyOnly(nextUrgencyOnly);
+              setSort(nextUrgencyOnly ? "recomendado" : "recientes");
+              resetPage();
+            }}
             search={search}
             onSearchChange={(q) => { setSearch(q); resetPage(); }}
             sort={sort}

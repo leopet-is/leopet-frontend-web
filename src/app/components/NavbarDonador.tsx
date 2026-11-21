@@ -62,7 +62,7 @@ export function NavbarDonador() {
   return (
     <>
       <nav className="bg-[#004955] h-[70px] w-full sticky top-0 z-50 shadow-md" role="navigation" aria-label="Menú principal">
-        <div className="max-w-[1248px] mx-auto h-full px-4 sm:px-6 md:px-8 lg:px-12 flex items-center justify-between">
+        <div className="h-full px-4 sm:px-6 md:px-8 flex items-center justify-between">
           <Link to="/" className="h-[46px] w-[56px] flex-shrink-0 flex items-center transition-opacity hover:opacity-90" aria-label="LeoPet — Ir al inicio">
             <svg className="size-full" fill="none" viewBox="0 0 60 50" aria-hidden="true">
               <g id="Group 1">

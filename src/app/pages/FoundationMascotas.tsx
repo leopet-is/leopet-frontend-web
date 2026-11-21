@@ -242,6 +242,32 @@ export function FoundationMascotas() {
     }
   };
 
+  const buildApiPayload = (data: PetFormData, status: string, visible: boolean) => {
+    const estimatedBirthDate = new Date();
+    estimatedBirthDate.setFullYear(
+      estimatedBirthDate.getFullYear() - Math.max(0, data.edad)
+    );
+
+    return {
+      nombre: data.nombre.trim(),
+      raza: data.raza,
+      descripcion: data.descripcion,
+      historia: data.historia,
+      especie: data.especie,
+      sexo: data.sexo,
+      peso: data.peso,
+      imagen: data.imagen,
+      galeria: data.galeria,
+      status,
+      visible,
+      fecha_nacimiento_estimada: estimatedBirthDate.toISOString().slice(0, 10),
+      enfermedades: data.enfermedades,
+      esterilizacion: data.esterilizacion === true,
+      vacunacion: data.vacunacion === true,
+      desparasitacion: data.desparasitacion === true,
+    };
+  };
+
   const handleNextStep = () => {
     setValidationBanner(null);
     if (step === 1) {
@@ -285,71 +311,30 @@ export function FoundationMascotas() {
     setIsSubmitting(true);
     try {
       const token = storage.getToken();
-      if (token && editingId && typeof editingId === 'number' && editingId < 1000000000000) {
-        try {
-          const apiPet = await updateMascotaApi(editingId, {
-            nombre: draftData.nombre,
-            raza: draftData.raza,
-            descripcion: draftData.descripcion,
-            especie: draftData.especie,
-            sexo: draftData.sexo,
-            peso: draftData.peso,
-            imagen: draftData.imagen,
-            status: "BORRADOR",
-            visible: false,
-          });
-          updateMascota(editingId, { ...draftData, ...apiPet });
-          setApiMascotas((current) =>
-            current?.map((pet) => (pet.id === editingId ? { ...pet, ...apiPet } : pet)) ?? current
-          );
-          showToast("Borrador guardado en la base de datos", "amber");
-        } catch (apiErr) {
-          console.warn("Aviso API update, respaldo local:", apiErr);
-          updateMascota(editingId, draftData);
-          setApiMascotas((current) =>
-            current?.map((pet) => (pet.id === editingId ? { ...pet, ...draftData } : pet)) ?? current
-          );
-          showToast("Borrador guardado localmente", "amber");
+      if (token) {
+        const payload = buildApiPayload(draftData, "BORRADOR", false);
+        const apiPet = editingId !== null
+          ? await updateMascotaApi(editingId, payload)
+          : await createMascotaApi(payload);
+        const savedPet: Pet = {
+          ...apiPet,
+          ...draftData,
+          id: apiPet.id,
+          fundacionId: apiPet.fundacionId || fundacionId,
+        };
+
+        if (editingId !== null) {
+          updateMascota(editingId, savedPet);
+        } else {
+          addMascota(savedPet);
         }
-      } else if (token && !editingId) {
-        try {
-          const apiPet = await createMascotaApi({
-            nombre: draftData.nombre,
-            raza: draftData.raza,
-            descripcion: draftData.descripcion,
-            especie: draftData.especie,
-            sexo: draftData.sexo,
-            peso: draftData.peso,
-            imagen: draftData.imagen,
-            status: "BORRADOR",
-            visible: false,
-          });
-          addMascota({
-            ...draftData,
-            ...apiPet,
-            fundacionId: apiPet.fundacionId || fundacionId,
-          });
-          setApiMascotas((current) => [
-            apiPet,
-            ...(current || []).filter((pet) => pet.id !== apiPet.id),
-          ]);
-          showToast("Borrador registrado en la base de datos", "amber");
-        } catch (apiErr) {
-          console.warn("Aviso API create, respaldo local:", apiErr);
-          const now = new Date().toISOString();
-          addMascota({
-            ...draftData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-          showToast("Borrador guardado localmente", "amber");
-        }
+        setApiMascotas((current) => [
+          savedPet,
+          ...(current || []).filter((pet) => pet.id !== savedPet.id),
+        ]);
+        showToast(editingId !== null ? "Borrador actualizado en el servidor." : "Borrador registrado en el servidor.", "amber");
       } else {
-        if (editingId) {
+        if (editingId !== null) {
           updateMascota(editingId, draftData);
         } else {
           const now = new Date().toISOString();
@@ -363,9 +348,12 @@ export function FoundationMascotas() {
             ubicacion: "Guayaquil",
           });
         }
-        showToast("Borrador guardado exitosamente", "amber");
+        showToast("Borrador guardado localmente.", "amber");
       }
       setShowModal(false);
+    } catch (error) {
+      console.error("Error al guardar borrador de mascota:", error);
+      showToast(error instanceof Error ? error.message : "No se pudo guardar el borrador.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -396,71 +384,30 @@ export function FoundationMascotas() {
     setIsSubmitting(true);
     try {
       const token = storage.getToken();
-      if (token && editingId && typeof editingId === 'number' && editingId < 1000000000000) {
-        try {
-          const apiPet = await updateMascotaApi(editingId, {
-            nombre: publishData.nombre,
-            raza: publishData.raza,
-            descripcion: publishData.descripcion,
-            especie: publishData.especie,
-            sexo: publishData.sexo,
-            peso: publishData.peso,
-            imagen: publishData.imagen,
-            status: "REQUIERE_PADRINOS",
-            visible: true,
-          });
-          updateMascota(editingId, { ...publishData, ...apiPet });
-          setApiMascotas((current) =>
-            current?.map((pet) => (pet.id === editingId ? { ...pet, ...apiPet } : pet)) ?? current
-          );
-          showToast("¡Mascota publicada exitosamente en el catálogo!", "success");
-        } catch (apiErr) {
-          console.warn("Aviso API update, respaldo local:", apiErr);
-          updateMascota(editingId, publishData);
-          setApiMascotas((current) =>
-            current?.map((pet) => (pet.id === editingId ? { ...pet, ...publishData } : pet)) ?? current
-          );
-          showToast("Mascota publicada localmente", "success");
+      if (token) {
+        const payload = buildApiPayload(publishData, "REQUIERE_PADRINOS", true);
+        const apiPet = editingId !== null
+          ? await updateMascotaApi(editingId, payload)
+          : await createMascotaApi(payload);
+        const savedPet: Pet = {
+          ...apiPet,
+          ...publishData,
+          id: apiPet.id,
+          fundacionId: apiPet.fundacionId || fundacionId,
+        };
+
+        if (editingId !== null) {
+          updateMascota(editingId, savedPet);
+        } else {
+          addMascota(savedPet);
         }
-      } else if (token && !editingId) {
-        try {
-          const apiPet = await createMascotaApi({
-            nombre: publishData.nombre,
-            raza: publishData.raza,
-            descripcion: publishData.descripcion,
-            especie: publishData.especie,
-            sexo: publishData.sexo,
-            peso: publishData.peso,
-            imagen: publishData.imagen,
-            status: "REQUIERE_PADRINOS",
-            visible: true,
-          });
-          addMascota({
-            ...publishData,
-            ...apiPet,
-            fundacionId: apiPet.fundacionId || fundacionId,
-          });
-          setApiMascotas((current) => [
-            apiPet,
-            ...(current || []).filter((pet) => pet.id !== apiPet.id),
-          ]);
-          showToast("¡Mascota registrada y publicada en catálogo!", "success");
-        } catch (apiErr) {
-          console.warn("Aviso API create, respaldo local:", apiErr);
-          const now = new Date().toISOString();
-          addMascota({
-            ...publishData,
-            id: Date.now(),
-            fundacionId,
-            createdAt: now,
-            updatedAt: now,
-            fechaRegistro: now.split("T")[0],
-            ubicacion: "Guayaquil",
-          });
-          showToast("Mascota publicada localmente", "success");
-        }
+        setApiMascotas((current) => [
+          savedPet,
+          ...(current || []).filter((pet) => pet.id !== savedPet.id),
+        ]);
+        showToast(editingId !== null ? "Mascota actualizada y publicada." : "Mascota registrada y publicada en el catálogo.", "success");
       } else {
-        if (editingId) {
+        if (editingId !== null) {
           updateMascota(editingId, publishData);
         } else {
           const now = new Date().toISOString();
@@ -474,9 +421,12 @@ export function FoundationMascotas() {
             ubicacion: "Guayaquil",
           });
         }
-        showToast("¡Mascota publicada con éxito!", "success");
+        showToast("Mascota publicada localmente.", "success");
       }
       setShowModal(false);
+    } catch (error) {
+      console.error("Error al guardar cambios de mascota:", error);
+      showToast(error instanceof Error ? error.message : "No se pudo guardar la mascota.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -669,16 +619,7 @@ export function FoundationMascotas() {
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {mascota.vacunacion === true && mascota.esterilizacion === true && mascota.desparasitacion === true && !mascota.enfermedades && (
-                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-medium">
-                          Salud al día
-                        </span>
-                      )}
-                      {mascota.enfermedades && mascota.enfermedades.trim().toLowerCase() !== "ninguna" && (
-                        <span className="px-2 py-0.5 bg-[#004955]/10 text-[#004955] rounded text-[10px] font-medium">{mascota.enfermedades}</span>
-                      )}
-                    </div>
+                  
                   </div>
                 </div>
 
@@ -1020,7 +961,7 @@ export function FoundationMascotas() {
                           type="checkbox"
                           checked={form.vacunacion === true}
                           onChange={(e) => {
-                            setForm({ ...form, vacunacion: e.target.checked ? true : null });
+                            setForm({ ...form, vacunacion: e.target.checked });
                             clearFieldError("vacunacion");
                           }}
                           className="w-4 h-4 rounded border-gray-300 text-[#07c4e1] focus:ring-[#07c4e1]"
@@ -1031,7 +972,7 @@ export function FoundationMascotas() {
                         <input
                           type="checkbox"
                           checked={form.esterilizacion === true}
-                          onChange={(e) => setForm({ ...form, esterilizacion: e.target.checked ? true : null })}
+                          onChange={(e) => setForm({ ...form, esterilizacion: e.target.checked })}
                           className="w-4 h-4 rounded border-gray-300 text-[#07c4e1] focus:ring-[#07c4e1]"
                         />
                         <span className="text-xs font-semibold text-gray-700">Esterilizado</span>
@@ -1040,7 +981,7 @@ export function FoundationMascotas() {
                         <input
                           type="checkbox"
                           checked={form.desparasitacion === true}
-                          onChange={(e) => setForm({ ...form, desparasitacion: e.target.checked ? true : null })}
+                          onChange={(e) => setForm({ ...form, desparasitacion: e.target.checked })}
                           className="w-4 h-4 rounded border-gray-300 text-[#07c4e1] focus:ring-[#07c4e1]"
                         />
                         <span className="text-xs font-semibold text-gray-700">Desparasitado</span>
